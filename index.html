@@ -346,7 +346,7 @@
 <div class="container">
   <div class="header">
     <h1>Deepgram Nova-3 + Gemini Dual-Pass Audio Caption Studio</h1>
-    <p style="color: var(--text-muted); margin: 0;">Precision Alignment with Name Highlighting & Smart Emojis</p>
+    <p style="color: var(--text-muted); margin: 0;">Precision Pronunciation Alignment with Name Highlighting & Smart Emojis</p>
   </div>
 
   <!-- API Key Setup Card -->
@@ -362,7 +362,7 @@
       </div>
     </div>
     <div class="info-box">
-      ⚡ <strong>Single 1-Upload Cloud Pipeline:</strong> Audio is uploaded ONCE to Cloudflare Pages in-memory proxy, which dispatches to Deepgram Nova-3 and Gemini in parallel over high-speed datacenter fiber.
+      ⚡ <strong>Single 1-Upload Cloud Pipeline:</strong> Audio is uploaded ONCE to Cloudflare Pages in-memory proxy, which dispatches to Deepgram Nova-3 (with filler word detection) and Gemini in parallel over high-speed datacenter fiber for exact acoustic pronunciation sync.
     </div>
   </div>
 
@@ -593,7 +593,7 @@
         console.warn('Cloudflare proxy unavailable, falling back to direct browser calls:', proxyErr.message);
 
         // Fallback: Direct browser calls
-        updateProgress(35, 'Fallback: Transcribing Deepgram Nova-3...');
+        updateProgress(35, 'Fallback: Transcribing Deepgram Nova-3 (with filler words)...');
         dgResult = await fetchDeepgramTimestamps(file, deepgramKey, spokenLang);
         const dgWords = dgResult.results?.channels?.[0]?.alternatives?.[0]?.words || [];
         roughWords = dgWords.map(w => ({
@@ -602,7 +602,7 @@
           end: Math.round(w.end * 1000)
         }));
 
-        updateProgress(65, 'Fallback: Refining with Gemini...');
+        updateProgress(65, 'Fallback: Refining acoustic cadence with Gemini...');
         const audioBase64 = await fileToBase64(file);
         rawGeminiResult = await refineWithGeminiWithFailover(
           audioBase64, 
@@ -627,7 +627,7 @@
       renderGeminiTable(refinedWords);
       plainTextOutput.value = refinedWords.map(w => w.word).join(' ');
       resetCaptionViewport();
-      updateProgress(100, `Done! Synced via 1-Upload Cloud Proxy.`);
+      updateProgress(100, `Done! Synced via 1-Upload Cloud Proxy with acoustic cadence precision.`);
 
     } catch (err) {
       alert(`Error: ${err.message}`);
@@ -638,7 +638,7 @@
     }
   });
 
-  // Continuous Piecewise Alignment Algorithm (Without VAD)
+  // Continuous Piecewise Alignment Algorithm with Acoustic Pause Preservation
   function continuousPiecewiseAlignment(words, roughWords) {
     if (!words || !words.length) return [];
 
@@ -646,26 +646,29 @@
       let start = w.start;
       let end = w.end;
 
+      // Rule 1: Prevent overlapping with previous word's end timestamp
       if (idx > 0 && start < words[idx - 1].end) {
         start = words[idx - 1].end;
       }
 
+      // Rule 2: Anchor tightly to Deepgram ground-truth acoustic sound onset if Gemini drifts > 150ms
       const sttMatch = roughWords[idx];
       if (sttMatch) {
-        if (Math.abs(start - sttMatch.start) > 180) {
-          const duration = Math.max(50, end - start);
+        if (Math.abs(start - sttMatch.start) > 150) {
+          const duration = Math.max(40, end - start);
           start = sttMatch.start;
-          end = start + duration;
+          end = Math.min(sttMatch.end, start + duration);
         }
       }
 
+      // Rule 3: Enforce minimum display floor based on character length
       const charCount = w.word.trim().length;
-      const minDuration = Math.max(35, Math.min(300, charCount * 25));
+      const minDuration = Math.max(30, Math.min(350, charCount * 22));
       if (end - start < minDuration) {
         end = start + minDuration;
       }
 
-      if (end <= start) end = start + 50;
+      if (end <= start) end = start + 40;
 
       return {
         word: w.word,
@@ -676,11 +679,11 @@
     });
   }
 
-  // Pass 1 Engine: Deepgram Nova-3 API Call
+  // Pass 1 Engine: Deepgram Nova-3 API Call (with filler_words=true)
   function fetchDeepgramTimestamps(file, apiKey, lang) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      let url = `https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true&utterances=true&word_timestamps=true`;
+      let url = `https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true&utterances=true&word_timestamps=true&filler_words=true`;
       if (lang) {
         url += `&language=${encodeURIComponent(lang)}`;
       }
@@ -749,17 +752,20 @@
       extraInstructions += `\n6. SMART CONTEXTUAL EMOJIS: Append 1 perfect, relevant emoji ONLY to key emotive words, sudden expressions, or main nouns (e.g., "Zara 👧", "Aiyo! 😱", "Super 🔥", "Love ❤️"). NEVER add emojis to routine words like "and", "the", "is".`;
     }
 
-    const systemPrompt = `You are an expert speech-to-text word corrector and high-speed acoustic alignment engine.
+    const systemPrompt = `You are an expert speech-to-text acoustic alignment engine and millisecond pronunciation timer.
 
 INPUT DATA:
 1. Audio file.
-2. Pass 1 rough draft word timestamps: ${JSON.stringify(roughWords)}
+2. Pass 1 baseline word timestamps: ${JSON.stringify(roughWords)}
 
-STRICT CONTINUOUS FULL-TRACK ALIGNMENT RULES:
+STRICT ACOUSTIC PRONUNCIATION & MILLISECOND TIMING DIRECTIVES:
 1. Target Script: ${targetScriptInstruction}
-2. CONTINUOUS FULL-TRACK MANDATE: You MUST ensure 100% uniform timestamp accuracy across all sections of the audio.
-3. Align every word's start/end timestamps directly to the speaker's vocal speed in the audio track.
-4. Correct wrong/misspelled words from Pass 1 while preserving exact vocal onset and offset sound bounds.${extraInstructions}
+2. ACOUSTIC SOUND BOUNDS: Align each word's "start" and "end" timestamps directly to when the speaker's vocal organs actually produce the sound:
+   - "start": Millisecond when the first vocal phoneme of the word is uttered.
+   - "end": Millisecond when the vocal sound of that word ends.
+3. EXTENDED VOWELS & CADENCE: If the speaker elongates or draws out a word (e.g., "sooooo", "ammaaaa"), stretch the (end - start) duration to cover the full physical sound length.
+4. PAUSES & BREATH BREAKS: Preserve natural silence gaps and pauses between phrases. Do not stretch words over silent gaps.
+5. Correct wrong/misspelled words from Pass 1 while keeping timestamps tightly bound to vocal sound onset/offset.${extraInstructions}
 
 Return ONLY a valid JSON array of objects with keys "word" (string), "start" (integer ms), "end" (integer ms), and "highlight" (boolean).`;
 

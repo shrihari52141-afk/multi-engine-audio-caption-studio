@@ -3,7 +3,7 @@ export async function onRequestPost(context) {
     const formData = await context.request.formData();
     const file = formData.get('file');
     const deepgramKey = formData.get('deepgramApiKey');
-    const geminiKeysRaw = formData.get('geminiApiKey'); // Can be single key or comma/newline separated
+    const geminiKeysRaw = formData.get('geminiApiKey');
     const geminiModel = formData.get('geminiModel') || 'gemini-2.5-flash';
     const scriptMode = formData.get('scriptMode') || 'native';
     const spokenLang = formData.get('spokenLang') || 'en';
@@ -19,8 +19,8 @@ export async function onRequestPost(context) {
 
     const arrayBuffer = await file.arrayBuffer();
 
-    // 1. Dispatch Pass 1 to Deepgram Nova-3 API over Cloudflare high-speed fiber
-    let dgUrl = `https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true&utterances=true&word_timestamps=true`;
+    // 1. Pass 1: Enhanced Deepgram Nova-3 API Call (with filler_words=true for micro-pause & hesitation precision)
+    let dgUrl = `https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true&utterances=true&word_timestamps=true&filler_words=true`;
     if (spokenLang) {
       dgUrl += `&language=${encodeURIComponent(spokenLang)}`;
     }
@@ -60,7 +60,7 @@ export async function onRequestPost(context) {
       end: Math.round(w.end * 1000)
     }));
 
-    // 3. Prepare Gemini Prompt with Highlight & Emoji Instructions
+    // 3. Prepare Enhanced Gemini Acoustic Alignment & Syllable Cadence Prompt
     const scriptPromptMap = {
       native: `transcribe the spoken words in the NATIVE SCRIPT of language code '${spokenLang}' (e.g. தமிழ், ಕನ್ನಡ, हिंदी).`,
       tanglish: `transcribe the spoken words in ROMANIZED / TANGLISH phonetic script using English letters (e.g. "Maanu", "Thappa", "Nee sari kadaiyathu").`,
@@ -77,17 +77,20 @@ export async function onRequestPost(context) {
       extraInstructions += `\n6. SMART CONTEXTUAL EMOJIS: Append 1 perfect, relevant emoji ONLY to key emotive words, sudden expressions, or main nouns (e.g., "Zara 👧", "Aiyo! 😱", "Super 🔥", "Love ❤️"). NEVER add emojis to routine words like "and", "the", "is".`;
     }
 
-    const systemPrompt = `You are an expert speech-to-text word corrector and high-speed acoustic alignment engine.
+    const systemPrompt = `You are an expert speech-to-text acoustic alignment engine and millisecond pronunciation timer.
 
 INPUT DATA:
 1. Audio file.
-2. Pass 1 rough draft word timestamps: ${JSON.stringify(roughWords)}
+2. Pass 1 baseline word timestamps: ${JSON.stringify(roughWords)}
 
-STRICT CONTINUOUS FULL-TRACK ALIGNMENT RULES:
+STRICT ACOUSTIC PRONUNCIATION & MILLISECOND TIMING DIRECTIVES:
 1. Target Script: ${targetScriptInstruction}
-2. CONTINUOUS FULL-TRACK MANDATE: You MUST ensure 100% uniform timestamp accuracy across all sections of the audio.
-3. Align every word's start/end timestamps directly to the speaker's vocal speed in the audio track.
-4. Correct wrong/misspelled words from Pass 1 while preserving exact vocal onset and offset sound bounds.${extraInstructions}
+2. ACOUSTIC SOUND BOUNDS: Align each word's "start" and "end" timestamps directly to when the speaker's vocal organs actually produce the sound:
+   - "start": Millisecond when the first vocal phoneme of the word is uttered.
+   - "end": Millisecond when the vocal sound of that word ends.
+3. EXTENDED VOWELS & CADENCE: If the speaker elongates or draws out a word (e.g., "sooooo", "ammaaaa"), stretch the (end - start) duration to cover the full physical sound length.
+4. PAUSES & BREATH BREAKS: Preserve natural silence gaps and pauses between phrases. Do not stretch words over silent gaps.
+5. Correct wrong/misspelled words from Pass 1 while keeping timestamps tightly bound to vocal sound onset/offset.${extraInstructions}
 
 Return ONLY a valid JSON array of objects with keys "word" (string), "start" (integer ms), "end" (integer ms), and "highlight" (boolean).`;
 
