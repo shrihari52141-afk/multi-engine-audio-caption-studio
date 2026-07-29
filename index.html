@@ -185,7 +185,7 @@
     .caption-viewport {
       background: #000;
       border-radius: 8px;
-      height: 160px;
+      min-height: 160px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -521,6 +521,7 @@
   let refinedWords = [];
   let lineChunks = [];
   let animFrameId = null;
+  let currentRenderedChunkIndex = -1;
 
   // Local Storage Key Persistence
   window.addEventListener('DOMContentLoaded', () => {
@@ -626,8 +627,10 @@
 
       renderGeminiTable(refinedWords);
       plainTextOutput.value = refinedWords.map(w => w.word).join(' ');
-      resetCaptionViewport();
-      updateProgress(100, `Done! Synced via 1-Upload Cloud Proxy with acoustic cadence precision.`);
+      
+      // Immediately render captions in editor viewport
+      renderSubtitles(0);
+      updateProgress(100, `Done! Captions synced & ready in editor.`);
 
     } catch (err) {
       alert(`Error: ${err.message}`);
@@ -857,27 +860,20 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
     return chunks;
   }
 
-  function resetCaptionViewport() {
-    captionContainer.innerHTML = `<span style="color: var(--text-muted); font-size: 1rem;">Press Play on audio player to test synchronized captions</span>`;
-  }
+  // Subtitle Renderer (Supports 60 FPS Sync & Immediate Preview)
+  function renderSubtitles(currentTimeMs) {
+    if (!lineChunks || lineChunks.length === 0) return;
 
-  // Zero-Lag 60 FPS Sync Loop
-  function startSyncLoop() {
-    if (animFrameId) cancelAnimationFrame(animFrameId);
-
-    function tick() {
-      if (!audioPlayer.paused && refinedWords.length > 0) {
-        const currentTimeMs = audioPlayer.currentTime * 1000;
-        updateSubtitles(currentTimeMs);
-        animFrameId = requestAnimationFrame(tick);
-      }
+    // Find active chunk or fall back to nearest chunk
+    let chunkIndex = lineChunks.findIndex(c => currentTimeMs >= c.start && currentTimeMs <= c.end + 80);
+    
+    if (chunkIndex === -1) {
+      // Find closest chunk if in silence gap or before start
+      chunkIndex = lineChunks.findIndex(c => currentTimeMs < c.start);
+      if (chunkIndex === -1) chunkIndex = lineChunks.length - 1;
     }
 
-    animFrameId = requestAnimationFrame(tick);
-  }
-
-  function updateSubtitles(currentTimeMs) {
-    const activeChunk = lineChunks.find(c => currentTimeMs >= c.start && currentTimeMs <= c.end + 80);
+    const activeChunk = lineChunks[chunkIndex];
 
     if (activeChunk) {
       captionContainer.innerHTML = '';
@@ -898,21 +894,38 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
 
         span.addEventListener('click', () => {
           audioPlayer.currentTime = w.start / 1000;
+          audioPlayer.play();
         });
 
         captionContainer.appendChild(span);
       });
-    } else {
-      captionContainer.querySelectorAll('.word-chunk.active').forEach(el => el.classList.remove('active'));
     }
+  }
+
+  // Zero-Lag 60 FPS Sync Loop
+  function startSyncLoop() {
+    if (animFrameId) cancelAnimationFrame(animFrameId);
+
+    function tick() {
+      if (!audioPlayer.paused && lineChunks.length > 0) {
+        renderSubtitles(audioPlayer.currentTime * 1000);
+        animFrameId = requestAnimationFrame(tick);
+      }
+    }
+
+    animFrameId = requestAnimationFrame(tick);
   }
 
   audioPlayer.addEventListener('play', startSyncLoop);
   audioPlayer.addEventListener('pause', () => {
     if (animFrameId) cancelAnimationFrame(animFrameId);
+    renderSubtitles(audioPlayer.currentTime * 1000);
+  });
+  audioPlayer.addEventListener('timeupdate', () => {
+    renderSubtitles(audioPlayer.currentTime * 1000);
   });
   audioPlayer.addEventListener('seeked', () => {
-    updateSubtitles(audioPlayer.currentTime * 1000);
+    renderSubtitles(audioPlayer.currentTime * 1000);
   });
 
   function renderGeminiTable(words) {
