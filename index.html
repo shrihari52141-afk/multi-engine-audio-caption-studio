@@ -199,7 +199,7 @@
     .caption-text {
       font-size: 2.1rem;
       font-weight: 700;
-      line-height: 1.5;
+      line-height: 1.6;
       word-wrap: break-word;
       max-width: 92%;
     }
@@ -208,9 +208,9 @@
       display: inline-block;
       margin: 0 0.35rem;
       color: #64748b;
-      transition: color 0.03s ease, transform 0.03s ease;
+      transition: color 0.05s ease, transform 0.05s ease, background 0.05s ease;
       cursor: pointer;
-      padding: 2px 6px;
+      padding: 3px 8px;
       border-radius: 6px;
     }
 
@@ -219,9 +219,11 @@
     }
 
     .word-chunk.active {
-      color: var(--highlight);
-      transform: scale(1.2);
-      text-shadow: 0 0 16px rgba(245, 158, 11, 0.8);
+      color: #ffffff;
+      background: var(--primary);
+      transform: scale(1.15);
+      box-shadow: 0 0 16px rgba(249, 115, 22, 0.8);
+      font-weight: 800;
     }
 
     .word-chunk.passed {
@@ -229,17 +231,18 @@
     }
 
     .word-chunk.highlighted {
-      background: rgba(245, 158, 11, 0.18);
+      background: rgba(245, 158, 11, 0.2);
       border: 1px dashed var(--highlight);
       color: #fcd34d;
     }
 
     .word-chunk.highlighted.active {
-      background: rgba(245, 158, 11, 0.45);
-      border: 1px solid var(--highlight);
-      color: #ffffff;
-      box-shadow: 0 0 18px rgba(245, 158, 11, 0.9);
-      transform: scale(1.22);
+      background: #f59e0b;
+      border: 1px solid #fbbf24;
+      color: #000000;
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.95);
+      transform: scale(1.2);
+      font-weight: 800;
     }
 
     audio {
@@ -407,7 +410,7 @@
     <div class="checkbox-group">
       <label class="checkbox-item">
         <input type="checkbox" id="enableHighlight" checked>
-        Highlight Names & Sudden Expressions (e.g., "Zara", "Aiyo!", "Wow!")
+        Highlight Names & Sudden Expressions (e.g., "Zara", "Shrihari", "Aiyo!", "Wow!")
       </label>
       <label class="checkbox-item">
         <input type="checkbox" id="enableEmojis" checked>
@@ -521,7 +524,6 @@
   let refinedWords = [];
   let lineChunks = [];
   let animFrameId = null;
-  let currentRenderedChunkIndex = -1;
 
   // Local Storage Key Persistence
   window.addEventListener('DOMContentLoaded', () => {
@@ -628,9 +630,11 @@
       renderGeminiTable(refinedWords);
       plainTextOutput.value = refinedWords.map(w => w.word).join(' ');
       
-      // Immediately render captions in editor viewport
-      renderSubtitles(0);
-      updateProgress(100, `Done! Captions synced & ready in editor.`);
+      // Render Initial Subtitle Chunk immediately
+      delete captionContainer.dataset.currentChunk;
+      updateSubtitles(0);
+
+      updateProgress(100, `Done! Synced via 1-Upload Cloud Proxy with acoustic cadence precision.`);
 
     } catch (err) {
       alert(`Error: ${err.message}`);
@@ -860,46 +864,9 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
     return chunks;
   }
 
-  // Subtitle Renderer (Supports 60 FPS Sync & Immediate Preview)
-  function renderSubtitles(currentTimeMs) {
-    if (!lineChunks || lineChunks.length === 0) return;
-
-    // Find active chunk or fall back to nearest chunk
-    let chunkIndex = lineChunks.findIndex(c => currentTimeMs >= c.start && currentTimeMs <= c.end + 80);
-    
-    if (chunkIndex === -1) {
-      // Find closest chunk if in silence gap or before start
-      chunkIndex = lineChunks.findIndex(c => currentTimeMs < c.start);
-      if (chunkIndex === -1) chunkIndex = lineChunks.length - 1;
-    }
-
-    const activeChunk = lineChunks[chunkIndex];
-
-    if (activeChunk) {
-      captionContainer.innerHTML = '';
-      activeChunk.words.forEach(w => {
-        const span = document.createElement('span');
-        span.textContent = w.word + ' ';
-        span.className = 'word-chunk';
-
-        if (w.highlight) {
-          span.classList.add('highlighted');
-        }
-
-        if (currentTimeMs >= w.start && currentTimeMs <= w.end) {
-          span.classList.add('active');
-        } else if (currentTimeMs > w.end) {
-          span.classList.add('passed');
-        }
-
-        span.addEventListener('click', () => {
-          audioPlayer.currentTime = w.start / 1000;
-          audioPlayer.play();
-        });
-
-        captionContainer.appendChild(span);
-      });
-    }
+  function resetCaptionViewport() {
+    captionContainer.innerHTML = `<span style="color: var(--text-muted); font-size: 1rem;">Press Play on audio player to test synchronized captions</span>`;
+    delete captionContainer.dataset.currentChunk;
   }
 
   // Zero-Lag 60 FPS Sync Loop
@@ -907,8 +874,9 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
     if (animFrameId) cancelAnimationFrame(animFrameId);
 
     function tick() {
-      if (!audioPlayer.paused && lineChunks.length > 0) {
-        renderSubtitles(audioPlayer.currentTime * 1000);
+      if (!audioPlayer.paused && refinedWords.length > 0) {
+        const currentTimeMs = audioPlayer.currentTime * 1000;
+        updateSubtitles(currentTimeMs);
         animFrameId = requestAnimationFrame(tick);
       }
     }
@@ -916,16 +884,73 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
     animFrameId = requestAnimationFrame(tick);
   }
 
+  function updateSubtitles(currentTimeMs) {
+    if (!lineChunks || lineChunks.length === 0) return;
+
+    // Find the line chunk that contains currentTimeMs or nearest chunk
+    let activeChunk = lineChunks.find(c => currentTimeMs >= c.start - 100 && currentTimeMs <= c.end + 300);
+
+    if (!activeChunk) {
+      activeChunk = lineChunks.find(c => currentTimeMs <= c.end);
+      if (!activeChunk && lineChunks.length > 0) {
+        activeChunk = lineChunks[lineChunks.length - 1];
+      }
+    }
+
+    if (activeChunk) {
+      const chunkKey = `${activeChunk.start}-${activeChunk.end}`;
+      if (captionContainer.dataset.currentChunk !== chunkKey) {
+        captionContainer.dataset.currentChunk = chunkKey;
+        captionContainer.innerHTML = '';
+
+        activeChunk.words.forEach(w => {
+          const span = document.createElement('span');
+          span.textContent = w.word + ' ';
+          span.className = 'word-chunk';
+          span.dataset.start = w.start;
+          span.dataset.end = w.end;
+
+          if (w.highlight) {
+            span.classList.add('highlighted');
+          }
+
+          span.addEventListener('click', () => {
+            audioPlayer.currentTime = w.start / 1000;
+            audioPlayer.play();
+          });
+
+          captionContainer.appendChild(span);
+        });
+      }
+
+      // Update active/passed classes on every 60 FPS tick
+      captionContainer.querySelectorAll('.word-chunk').forEach(span => {
+        const wStart = parseInt(span.dataset.start, 10);
+        const wEnd = parseInt(span.dataset.end, 10);
+
+        if (currentTimeMs >= wStart && currentTimeMs <= wEnd) {
+          span.classList.add('active');
+          span.classList.remove('passed');
+        } else if (currentTimeMs > wEnd) {
+          span.classList.remove('active');
+          span.classList.add('passed');
+        } else {
+          span.classList.remove('active', 'passed');
+        }
+      });
+    }
+  }
+
   audioPlayer.addEventListener('play', startSyncLoop);
   audioPlayer.addEventListener('pause', () => {
     if (animFrameId) cancelAnimationFrame(animFrameId);
-    renderSubtitles(audioPlayer.currentTime * 1000);
-  });
-  audioPlayer.addEventListener('timeupdate', () => {
-    renderSubtitles(audioPlayer.currentTime * 1000);
+    updateSubtitles(audioPlayer.currentTime * 1000);
   });
   audioPlayer.addEventListener('seeked', () => {
-    renderSubtitles(audioPlayer.currentTime * 1000);
+    updateSubtitles(audioPlayer.currentTime * 1000);
+  });
+  audioPlayer.addEventListener('timeupdate', () => {
+    updateSubtitles(audioPlayer.currentTime * 1000);
   });
 
   function renderGeminiTable(words) {
