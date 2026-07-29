@@ -3,12 +3,14 @@ export async function onRequestPost(context) {
     const formData = await context.request.formData();
     const file = formData.get('file');
     const deepgramKey = formData.get('deepgramApiKey');
-    const geminiKey = formData.get('geminiApiKey');
+    const geminiKeysRaw = formData.get('geminiApiKey'); // Can be single key or comma/newline separated
     const geminiModel = formData.get('geminiModel') || 'gemini-2.5-flash';
     const scriptMode = formData.get('scriptMode') || 'native';
     const spokenLang = formData.get('spokenLang') || 'en';
+    const enableHighlight = formData.get('enableHighlight') === 'true';
+    const enableEmojis = formData.get('enableEmojis') === 'true';
 
-    if (!file || !deepgramKey || !geminiKey) {
+    if (!file || !deepgramKey || !geminiKeysRaw) {
       return new Response(JSON.stringify({ error: 'Missing required parameters (file, Deepgram key, or Gemini key).' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -58,7 +60,7 @@ export async function onRequestPost(context) {
       end: Math.round(w.end * 1000)
     }));
 
-    // 3. Dispatch Pass 2 to Gemini API over Cloudflare high-speed fiber
+    // 3. Prepare Gemini Prompt with Highlight & Emoji Instructions
     const scriptPromptMap = {
       native: `transcribe the spoken words in the NATIVE SCRIPT of language code '${spokenLang}' (e.g. தமிழ், ಕನ್ನಡ, हिंदी).`,
       tanglish: `transcribe the spoken words in ROMANIZED / TANGLISH phonetic script using English letters (e.g. "Maanu", "Thappa", "Nee sari kadaiyathu").`,
@@ -66,6 +68,14 @@ export async function onRequestPost(context) {
     };
 
     const targetScriptInstruction = scriptPromptMap[scriptMode] || scriptPromptMap.native;
+
+    let extraInstructions = "";
+    if (enableHighlight) {
+      extraInstructions += `\n5. IDENTIFY NAMES & EXPRESSIONS: Set "highlight": true for proper names (e.g., "Zara", "Shrihari"), sudden vocal interjections, or exclamations ("Aiyo!", "Wow!", "Ahaa!"). Otherwise set "highlight": false.`;
+    }
+    if (enableEmojis) {
+      extraInstructions += `\n6. SMART CONTEXTUAL EMOJIS: Append 1 perfect, relevant emoji ONLY to key emotive words, sudden expressions, or main nouns (e.g., "Zara 👧", "Aiyo! 😱", "Super 🔥", "Love ❤️"). NEVER add emojis to routine words like "and", "the", "is".`;
+    }
 
     const systemPrompt = `You are an expert speech-to-text word corrector and high-speed acoustic alignment engine.
 
@@ -77,9 +87,9 @@ STRICT CONTINUOUS FULL-TRACK ALIGNMENT RULES:
 1. Target Script: ${targetScriptInstruction}
 2. CONTINUOUS FULL-TRACK MANDATE: You MUST ensure 100% uniform timestamp accuracy across all sections of the audio.
 3. Align every word's start/end timestamps directly to the speaker's vocal speed in the audio track.
-4. Correct wrong/misspelled words from Pass 1 while preserving exact vocal onset and offset sound bounds.
+4. Correct wrong/misspelled words from Pass 1 while preserving exact vocal onset and offset sound bounds.${extraInstructions}
 
-Return ONLY a valid JSON array of objects with keys "word" (string), "start" (integer ms), and "end" (integer ms).`;
+Return ONLY a valid JSON array of objects with keys "word" (string), "start" (integer ms), "end" (integer ms), and "highlight" (boolean).`;
 
     const geminiReqBody = {
       contents: [{
@@ -102,7 +112,8 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
             properties: {
               word: { type: "STRING" },
               start: { type: "INTEGER" },
-              end: { type: "INTEGER" }
+              end: { type: "INTEGER" },
+              highlight: { type: "BOOLEAN" }
             },
             required: ["word", "start", "end"]
           }
@@ -110,22 +121,41 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
       }
     };
 
-    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(geminiReqBody)
-    });
+    // Failover Shuffle Execution over Gemini Keys
+    const geminiKeys = geminiKeysRaw.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
+    const shuffledKeys = [...geminiKeys].sort(() => Math.random() - 0.5);
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      throw new Error(`Gemini API Error (${geminiRes.status}): ${errText}`);
+    let rawGeminiResult = null;
+    let lastErr = null;
+
+    for (let i = 0; i < shuffledKeys.length; i++) {
+      const currentKey = shuffledKeys[i];
+      try {
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${currentKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(geminiReqBody)
+        });
+
+        if (!geminiRes.ok) {
+          const errText = await geminiRes.text();
+          throw new Error(`Gemini API Error (${geminiRes.status}): ${errText}`);
+        }
+
+        const geminiData = await geminiRes.json();
+        const candidateText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!candidateText) throw new Error('No valid response generated by Gemini.');
+
+        rawGeminiResult = JSON.parse(candidateText);
+        break; // Success!
+      } catch (err) {
+        lastErr = err;
+      }
     }
 
-    const geminiData = await geminiRes.json();
-    const candidateText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!candidateText) throw new Error('No valid response generated by Gemini.');
-
-    const rawGeminiResult = JSON.parse(candidateText);
+    if (!rawGeminiResult) {
+      throw new Error(`All ${shuffledKeys.length} Gemini keys failed: ${lastErr ? lastErr.message : 'Unknown error'}`);
+    }
 
     return new Response(JSON.stringify({
       dgResult,
