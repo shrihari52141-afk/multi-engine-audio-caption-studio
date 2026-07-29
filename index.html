@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multi-Engine Dual-Pass Audio Caption Studio</title>
+  <title>Deepgram + Gemini Audio Caption Studio</title>
   <style>
     :root {
       --bg: #090d16;
@@ -38,14 +38,8 @@
       gap: 1.5rem;
     }
 
-    .header {
-      text-align: center;
-    }
-
-    .header h1 {
-      margin: 0 0 0.5rem 0;
-      font-size: 1.8rem;
-    }
+    .header { text-align: center; }
+    .header h1 { margin: 0 0 0.5rem 0; font-size: 1.8rem; }
 
     .card {
       background: var(--card-bg);
@@ -57,17 +51,8 @@
       gap: 1rem;
     }
 
-    .grid-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 1rem;
-    }
-
-    .grid-4 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr;
-      gap: 1rem;
-    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
 
     label {
       font-size: 0.85rem;
@@ -89,10 +74,7 @@
       font-family: inherit;
     }
 
-    textarea {
-      resize: vertical;
-      min-height: 60px;
-    }
+    textarea { resize: vertical; min-height: 60px; }
 
     .info-box {
       background: #1e293b;
@@ -116,16 +98,9 @@
       font-size: 0.95rem;
     }
 
-    button:hover {
-      background: var(--primary-hover);
-    }
+    button:hover { background: var(--primary-hover); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    /* Progress Bar */
     .progress-container {
       width: 100%;
       background: var(--code-bg);
@@ -156,7 +131,6 @@
       text-shadow: 0 0 4px #000;
     }
 
-    /* Caption Display Viewport */
     .caption-viewport {
       background: #000;
       border-radius: 8px;
@@ -187,25 +161,15 @@
       cursor: pointer;
     }
 
-    .word-chunk:hover {
-      color: #cbd5e1;
-    }
-
     .word-chunk.active {
       color: var(--highlight);
       transform: scale(1.2);
       text-shadow: 0 0 16px rgba(245, 158, 11, 0.8);
     }
 
-    .word-chunk.passed {
-      color: #f8fafc;
-    }
+    .word-chunk.passed { color: #f8fafc; }
+    audio { width: 100%; }
 
-    audio {
-      width: 100%;
-    }
-
-    /* Tabs */
     .tab-bar {
       display: flex;
       gap: 0.5rem;
@@ -229,13 +193,8 @@
       border-color: var(--border);
     }
 
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
     pre {
       background: var(--code-bg);
@@ -249,35 +208,12 @@
       max-height: 350px;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 0.5rem;
-      font-size: 0.95rem;
-    }
-
-    th, td {
-      border: 1px solid var(--border);
-      padding: 0.6rem 0.8rem;
-      text-align: left;
-    }
-
-    th {
-      background: #1e293b;
-      color: var(--accent);
-    }
-
-    tr:nth-child(even) {
-      background: #0d1424;
-    }
-
-    tr.clickable-row {
-      cursor: pointer;
-    }
-
-    tr.clickable-row:hover {
-      background: #1e293b;
-    }
+    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.95rem; }
+    th, td { border: 1px solid var(--border); padding: 0.6rem 0.8rem; text-align: left; }
+    th { background: #1e293b; color: var(--accent); }
+    tr:nth-child(even) { background: #0d1424; }
+    tr.clickable-row { cursor: pointer; }
+    tr.clickable-row:hover { background: #1e293b; }
 
     .badge {
       display: inline-block;
@@ -295,20 +231,15 @@
 
 <div class="container">
   <div class="header">
-    <h1>Multi-Engine Dual-Pass Audio Caption Studio</h1>
-    <p style="color: var(--text-muted); margin: 0;">Compare Groq Whisper v3 vs. Deepgram Nova-3 with Gemini Multimodal Refinement</p>
+    <h1>Deepgram Nova-3 + Gemini Dual-Pass Caption Studio</h1>
+    <p style="color: var(--text-muted); margin: 0;">High-Precision Acoustic Alignment Engine</p>
   </div>
 
-  <!-- API Key Setup Card -->
   <div class="card">
-    <div class="grid-3">
-      <div>
-        <label for="groqApiKey">Groq API Key (Whisper STT)</label>
-        <input type="text" id="groqApiKey" placeholder="gsk_...">
-      </div>
+    <div class="grid-2">
       <div>
         <label for="deepgramApiKey">Deepgram API Key (Nova-3 STT)</label>
-        <input type="text" id="deepgramApiKey" placeholder="Token ... or key">
+        <input type="text" id="deepgramApiKey" placeholder="Token ... or raw key">
       </div>
       <div>
         <label for="geminiApiKeys">Gemini Keys (Commas/Newlines for Shuffle)</label>
@@ -316,20 +247,12 @@
       </div>
     </div>
     <div class="info-box">
-      ⚡ <strong>Dual Pass Benchmarking:</strong> Choose between Groq (Whisper Large-v3) or Deepgram (Nova-3) for Pass 1 timestamp extraction, then let Gemini (Pass 2) refine accuracy while preserving acoustic energy alignment.
+      ⚡ <strong>Deepgram + Gemini Pipeline:</strong> Pass 1 extracts word-level baseline timestamps via Deepgram Nova-3. Pass 2 uses Gemini for multimodal refinement and script translation.
     </div>
   </div>
 
-  <!-- Audio & Output Settings -->
   <div class="card">
-    <div class="grid-4">
-      <div>
-        <label for="sttEngineSelect">Pass 1 STT Provider</label>
-        <select id="sttEngineSelect">
-          <option value="groq" selected>Groq (Whisper Large-v3)</option>
-          <option value="deepgram">Deepgram (Nova-3 Engine)</option>
-        </select>
-      </div>
+    <div class="grid-3">
       <div>
         <label for="geminiModelSelect">Pass 2 Gemini Refiner</label>
         <select id="geminiModelSelect">
@@ -371,14 +294,12 @@
 
     <button id="processBtn">Transcribe & Sync Complete Audio Track</button>
 
-    <!-- Upload/Processing Progress Bar -->
     <div id="progressContainer" class="progress-container">
       <div id="progressFill" class="progress-fill"></div>
       <div id="progressText" class="progress-text">0%</div>
     </div>
   </div>
 
-  <!-- Live Caption Viewport -->
   <div class="card">
     <label>Live Synchronized Captions (60 FPS Engine)</label>
     <div class="caption-viewport">
@@ -391,17 +312,15 @@
     <audio id="audioPlayer" controls></audio>
   </div>
 
-  <!-- Outputs Card -->
   <div class="card">
     <div class="tab-bar">
       <button class="tab-btn active" onclick="switchTab('geminiWordsTab', this)">Refined Timestamps <span class="badge">100% Synced</span></button>
       <button class="tab-btn" onclick="switchTab('speechSegmentsTab', this)">Web Audio VAD Envelopes</button>
       <button class="tab-btn" onclick="switchTab('plainTextTab', this)">Plain Text Transcript</button>
-      <button class="tab-btn" onclick="switchTab('pass1RawTab', this)">Pass 1 STT Raw JSON</button>
+      <button class="tab-btn" onclick="switchTab('deepgramRawTab', this)">Deepgram Raw JSON</button>
       <button class="tab-btn" onclick="switchTab('geminiRawTab', this)">Gemini Raw Output</button>
     </div>
 
-    <!-- Tab 1: Corrected Timestamps -->
     <div id="geminiWordsTab" class="tab-content active">
       <label>100% Precision Word Timestamps (Click row to seek audio)</label>
       <div style="max-height: 350px; overflow-y: auto;">
@@ -423,7 +342,6 @@
       </div>
     </div>
 
-    <!-- Tab 2: Speech Envelopes -->
     <div id="speechSegmentsTab" class="tab-content">
       <label>Web Audio Active VAD Speech Envelopes</label>
       <div style="max-height: 350px; overflow-y: auto;">
@@ -444,19 +362,16 @@
       </div>
     </div>
 
-    <!-- Tab 3: Plain Text -->
     <div id="plainTextTab" class="tab-content">
       <label>Full Refined Transcript</label>
       <textarea id="plainTextOutput" readonly style="min-height: 140px; color: #38bdf8; font-size: 1.15rem; line-height: 1.6;"></textarea>
     </div>
 
-    <!-- Tab 4: Pass 1 STT Raw Output -->
-    <div id="pass1RawTab" class="tab-content">
-      <label>Pass 1 Raw Output (Groq / Deepgram Baseline)</label>
-      <pre id="pass1RawOutput">// Selected STT Engine JSON will appear here...</pre>
+    <div id="deepgramRawTab" class="tab-content">
+      <label>Deepgram Nova-3 Raw JSON (Pass 1 Baseline)</label>
+      <pre id="deepgramRawOutput">// Deepgram JSON will appear here...</pre>
     </div>
 
-    <!-- Tab 5: Gemini Raw Output -->
     <div id="geminiRawTab" class="tab-content">
       <label>Gemini Raw JSON Output</label>
       <pre id="geminiRawOutput">// Gemini JSON will appear here...</pre>
@@ -465,11 +380,8 @@
 </div>
 
 <script>
-  // DOM Elements
-  const groqApiKeyInput = document.getElementById('groqApiKey');
   const deepgramApiKeyInput = document.getElementById('deepgramApiKey');
   const geminiApiKeysInput = document.getElementById('geminiApiKeys');
-  const sttEngineSelect = document.getElementById('sttEngineSelect');
   const geminiModelSelect = document.getElementById('geminiModelSelect');
   const scriptModeSelect = document.getElementById('scriptMode');
   const spokenLangSelect = document.getElementById('spokenLang');
@@ -486,7 +398,7 @@
   const geminiTableBody = document.getElementById('geminiTableBody');
   const speechSegmentsTableBody = document.getElementById('speechSegmentsTableBody');
   const plainTextOutput = document.getElementById('plainTextOutput');
-  const pass1RawOutput = document.getElementById('pass1RawOutput');
+  const deepgramRawOutput = document.getElementById('deepgramRawOutput');
   const geminiRawOutput = document.getElementById('geminiRawOutput');
 
   let refinedWords = [];
@@ -494,19 +406,13 @@
   let lineChunks = [];
   let animFrameId = null;
 
-  // Local Storage Key Persistence
   window.addEventListener('DOMContentLoaded', () => {
-    const savedGroq = localStorage.getItem('groq_api_key');
     const savedDeepgram = localStorage.getItem('deepgram_api_key');
     const savedGemini = localStorage.getItem('gemini_api_keys');
-    if (savedGroq) groqApiKeyInput.value = savedGroq;
     if (savedDeepgram) deepgramApiKeyInput.value = savedDeepgram;
     if (savedGemini) geminiApiKeysInput.value = savedGemini;
   });
 
-  groqApiKeyInput.addEventListener('input', () => {
-    localStorage.setItem('groq_api_key', groqApiKeyInput.value.trim());
-  });
   deepgramApiKeyInput.addEventListener('input', () => {
     localStorage.setItem('deepgram_api_key', deepgramApiKeyInput.value.trim());
   });
@@ -515,8 +421,6 @@
   });
 
   processBtn.addEventListener('click', async () => {
-    const sttEngine = sttEngineSelect.value;
-    const groqKey = groqApiKeyInput.value.trim();
     const deepgramKey = deepgramApiKeyInput.value.trim();
     const geminiKeysRaw = geminiApiKeysInput.value.trim();
     const file = audioFileInput.files[0];
@@ -524,8 +428,7 @@
     const scriptMode = scriptModeSelect.value;
     const spokenLang = spokenLangSelect.value;
 
-    if (sttEngine === 'groq' && !groqKey) return alert('Please enter your Groq API Key.');
-    if (sttEngine === 'deepgram' && !deepgramKey) return alert('Please enter your Deepgram API Key.');
+    if (!deepgramKey) return alert('Please enter your Deepgram API Key.');
     if (!geminiKeysRaw) return alert('Please enter at least one Gemini API Key.');
     if (!file) return alert('Please select an audio file.');
 
@@ -544,34 +447,23 @@
       speechSegments = vadAnalysis.speechSegments;
       renderSpeechSegmentsTable(speechSegments);
 
-      // STEP 2: Selected Pass 1 STT Timestamps Extraction
-      let roughWords = [];
-      if (sttEngine === 'groq') {
-        updateProgress(25, 'Pass 1/2: Extracting Groq Whisper v3 timestamps...');
-        const groqResult = await fetchGroqTimestamps(file, groqKey, spokenLang);
-        pass1RawOutput.textContent = JSON.stringify(groqResult, null, 2);
-        roughWords = (groqResult.words || []).map(w => ({
-          word: w.word,
-          start: Math.round(w.start * 1000),
-          end: Math.round(w.end * 1000)
-        }));
-      } else if (sttEngine === 'deepgram') {
-        updateProgress(25, 'Pass 1/2: Extracting Deepgram Nova-3 timestamps...');
-        const dgResult = await fetchDeepgramTimestamps(file, deepgramKey, spokenLang);
-        pass1RawOutput.textContent = JSON.stringify(dgResult, null, 2);
-        const dgWords = dgResult.results?.channels?.[0]?.alternatives?.[0]?.words || [];
-        roughWords = dgWords.map(w => ({
-          word: w.punctuated_word || w.word,
-          start: Math.round(w.start * 1000),
-          end: Math.round(w.end * 1000)
-        }));
-      }
+      // STEP 2: Pass 1 Deepgram Nova-3 Timestamps Extraction
+      updateProgress(25, 'Pass 1/2: Extracting Deepgram Nova-3 timestamps...');
+      const dgResult = await fetchDeepgramTimestamps(file, deepgramKey, spokenLang);
+      deepgramRawOutput.textContent = JSON.stringify(dgResult, null, 2);
+      
+      const dgWords = dgResult.results?.channels?.[0]?.alternatives?.[0]?.words || [];
+      const roughWords = dgWords.map(w => ({
+        word: w.punctuated_word || w.word,
+        start: Math.round(w.start * 1000),
+        end: Math.round(w.end * 1000)
+      }));
 
       // STEP 3: Base64 encode audio
       updateProgress(50, 'Encoding audio binary for Gemini...');
       const audioBase64 = await fileToBase64(file);
 
-      // STEP 4: Gemini Multimodal Word Refinement
+      // STEP 4: Pass 2 Gemini Multimodal Word Refinement
       updateProgress(70, `Pass 2/2: Gemini refining text & cadence alignment...`);
       const rawGeminiResult = await refineWithGemini(audioBase64, file.type, roughWords, speechSegments, scriptMode, spokenLang, selectedGeminiKey, geminiModel);
       geminiRawOutput.textContent = JSON.stringify(rawGeminiResult, null, 2);
@@ -583,7 +475,7 @@
       renderGeminiTable(refinedWords);
       plainTextOutput.value = refinedWords.map(w => w.word).join(' ');
       resetCaptionViewport();
-      updateProgress(100, `Done! Synced via ${sttEngine.toUpperCase()} + Gemini.`);
+      updateProgress(100, `Done! Synced via DEEPGRAM + Gemini.`);
 
     } catch (err) {
       alert(`Error: ${err.message}`);
@@ -594,7 +486,6 @@
     }
   });
 
-  // Web Audio PCM Energy Analyzer
   async function analyzeAudioSpeechEnvelopes(file) {
     const arrayBuffer = await file.arrayBuffer();
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -662,7 +553,6 @@
     return { speechSegments, totalMs };
   }
 
-  // Continuous Piecewise Alignment
   function continuousPiecewiseAlignment(words, segments, roughWords) {
     if (!words || !words.length) return [];
 
@@ -674,11 +564,11 @@
         start = words[idx - 1].end;
       }
 
-      const sttMatch = roughWords[idx];
-      if (sttMatch) {
-        if (Math.abs(start - sttMatch.start) > 180) {
+      const dgMatch = roughWords[idx];
+      if (dgMatch) {
+        if (Math.abs(start - dgMatch.start) > 180) {
           const duration = Math.max(50, end - start);
-          start = sttMatch.start;
+          start = dgMatch.start;
           end = start + duration;
         }
       }
@@ -705,42 +595,6 @@
     });
   }
 
-  // Pass 1 Engine 1: Groq Whisper API Call
-  function fetchGroqTimestamps(file, apiKey, lang) {
-    return new Promise((resolve, reject) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('model', 'whisper-large-v3');
-      formData.append('response_format', 'verbose_json');
-      formData.append('timestamp_granularities[]', 'word');
-      formData.append('temperature', '0');
-      formData.append('prompt', 'Verbatim speech transcription with millisecond word-level timing precision across entire audio.');
-      if (lang) formData.append('language', lang);
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', 'https://api.groq.com/openai/v1/audio/transcriptions');
-      xhr.setRequestHeader('Authorization', `Bearer ${apiKey}`);
-
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 25);
-          updateProgress(25 + pct, `Uploading to Groq: ${pct}%`);
-        }
-      };
-
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try { resolve(JSON.parse(xhr.responseText)); } catch(e) { reject(e); }
-        } else {
-          reject(new Error(`Groq API error (${xhr.status}): ${xhr.responseText}`));
-        }
-      };
-      xhr.onerror = () => reject(new Error('Groq network error'));
-      xhr.send(formData);
-    });
-  }
-
-  // Pass 1 Engine 2: Deepgram Nova-3 API Call
   function fetchDeepgramTimestamps(file, apiKey, lang) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -750,7 +604,6 @@
       }
 
       xhr.open('POST', url);
-      // Support both "Token <key>" or raw key header
       const authHeader = apiKey.toLowerCase().startsWith('token ') ? apiKey : `Token ${apiKey}`;
       xhr.setRequestHeader('Authorization', authHeader);
       xhr.setRequestHeader('Content-Type', file.type || 'audio/mp3');
@@ -774,7 +627,6 @@
     });
   }
 
-  // Pass 2: Gemini Call with Full-Stream Alignment Directives
   async function refineWithGemini(audioBase64, mimeType, roughWords, speechSegments, scriptMode, spokenLang, apiKey, modelName) {
     const scriptPromptMap = {
       native: `transcribe the spoken words in the NATIVE SCRIPT of language code '${spokenLang}' (e.g. தமிழ், ಕನ್ನಡ, हिंदी).`,
@@ -846,7 +698,6 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
     return JSON.parse(candidateText);
   }
 
-  // Helpers
   function fileToBase64(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -890,7 +741,6 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
     captionContainer.innerHTML = `<span style="color: var(--text-muted); font-size: 1rem;">Press Play on audio player to test synchronized captions</span>`;
   }
 
-  // Zero-Lag 60 FPS Sync Loop
   function startSyncLoop() {
     if (animFrameId) cancelAnimationFrame(animFrameId);
 
