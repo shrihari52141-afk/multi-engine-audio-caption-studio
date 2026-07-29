@@ -247,7 +247,7 @@
       </div>
     </div>
     <div class="info-box">
-      ⚡ <strong>Deepgram + Gemini Pipeline:</strong> Pass 1 extracts word-level baseline timestamps via Deepgram Nova-3. Pass 2 uses Gemini for multimodal refinement and script translation.
+      ⚡ <strong>Single 1-Upload Cloud Pipeline:</strong> Uploads audio ONCE to Cloudflare Pages in-memory proxy, which dispatches to Deepgram Nova-3 and Gemini in parallel over high-speed datacenter fiber.
     </div>
   </div>
 
@@ -280,7 +280,7 @@
           <option value="ml">Malayalam (മലയാളം)</option>
           <option value="mr">Marathi (मराठी)</option>
           <option value="bn">Bengali (বাংলা)</option>
-          <option value="gu">Gujarati (ગુજરાતી)</option>
+          <option value="gu">Gujarati (<ctrl42>ગુજરાતી)</option>
           <option value="en">English</option>
           <option value="es">Spanish</option>
         </select>
@@ -441,41 +441,69 @@
       progressContainer.style.display = 'block';
       audioPlayer.src = URL.createObjectURL(file);
 
-      // STEP 1: Extract Web Audio VAD Speech Envelopes
-      updateProgress(5, 'Extracting vocal energy profile & VAD segments...');
+      // STEP 1: Extract Web Audio VAD Speech Envelopes (0ms network)
+      updateProgress(10, 'Extracting vocal energy profile & VAD segments...');
       const vadAnalysis = await analyzeAudioSpeechEnvelopes(file);
       speechSegments = vadAnalysis.speechSegments;
       renderSpeechSegmentsTable(speechSegments);
 
-      // STEP 2: Pass 1 Deepgram Nova-3 Timestamps Extraction
-      updateProgress(25, 'Pass 1/2: Extracting Deepgram Nova-3 timestamps...');
-      const dgResult = await fetchDeepgramTimestamps(file, deepgramKey, spokenLang);
+      // STEP 2: Send Single 1-Upload to Serverless Proxy (/api/transcribe)
+      updateProgress(25, 'Uploading audio ONCE to Cloudflare high-speed fiber...');
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('deepgramApiKey', deepgramKey);
+      formData.append('geminiApiKey', selectedGeminiKey);
+      formData.append('geminiModel', geminiModel);
+      formData.append('scriptMode', scriptMode);
+      formData.append('spokenLang', spokenLang);
+
+      let dgResult, roughWords, rawGeminiResult;
+
+      try {
+        const response = await fetch('/api/transcribe', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (response.ok) {
+          updateProgress(75, 'Cloudflare dispatched to Deepgram & Gemini in parallel...');
+          const data = await response.json();
+          dgResult = data.dgResult;
+          roughWords = data.roughWords;
+          rawGeminiResult = data.rawGeminiResult;
+        } else {
+          throw new Error(`Server returned status ${response.status}`);
+        }
+      } catch (proxyErr) {
+        console.warn('Cloudflare proxy unavailable, falling back to direct browser calls:', proxyErr.message);
+        
+        // Fallback: Direct browser calls
+        updateProgress(35, 'Fallback: Transcribing Deepgram Nova-3...');
+        dgResult = await fetchDeepgramTimestamps(file, deepgramKey, spokenLang);
+        const dgWords = dgResult.results?.channels?.[0]?.alternatives?.[0]?.words || [];
+        roughWords = dgWords.map(w => ({
+          word: w.punctuated_word || w.word,
+          start: Math.round(w.start * 1000),
+          end: Math.round(w.end * 1000)
+        }));
+
+        updateProgress(65, 'Fallback: Refining with Gemini...');
+        const audioBase64 = await fileToBase64(file);
+        rawGeminiResult = await refineWithGemini(audioBase64, file.type, roughWords, speechSegments, scriptMode, spokenLang, selectedGeminiKey, geminiModel);
+      }
+
       deepgramRawOutput.textContent = JSON.stringify(dgResult, null, 2);
-      
-      const dgWords = dgResult.results?.channels?.[0]?.alternatives?.[0]?.words || [];
-      const roughWords = dgWords.map(w => ({
-        word: w.punctuated_word || w.word,
-        start: Math.round(w.start * 1000),
-        end: Math.round(w.end * 1000)
-      }));
-
-      // STEP 3: Base64 encode audio
-      updateProgress(50, 'Encoding audio binary for Gemini...');
-      const audioBase64 = await fileToBase64(file);
-
-      // STEP 4: Pass 2 Gemini Multimodal Word Refinement
-      updateProgress(70, `Pass 2/2: Gemini refining text & cadence alignment...`);
-      const rawGeminiResult = await refineWithGemini(audioBase64, file.type, roughWords, speechSegments, scriptMode, spokenLang, selectedGeminiKey, geminiModel);
       geminiRawOutput.textContent = JSON.stringify(rawGeminiResult, null, 2);
 
-      // STEP 5: Continuous Piecewise Re-Anchoring
+      // STEP 3: Continuous Piecewise Re-Anchoring
       refinedWords = continuousPiecewiseAlignment(rawGeminiResult, speechSegments, roughWords);
       lineChunks = chunkWordsIntoLines(refinedWords, 6);
 
       renderGeminiTable(refinedWords);
       plainTextOutput.value = refinedWords.map(w => w.word).join(' ');
       resetCaptionViewport();
-      updateProgress(100, `Done! Synced via DEEPGRAM + Gemini.`);
+      updateProgress(100, `Done! Synced via 1-Upload Cloud Proxy.`);
 
     } catch (err) {
       alert(`Error: ${err.message}`);
@@ -607,13 +635,6 @@
       const authHeader = apiKey.toLowerCase().startsWith('token ') ? apiKey : `Token ${apiKey}`;
       xhr.setRequestHeader('Authorization', authHeader);
       xhr.setRequestHeader('Content-Type', file.type || 'audio/mp3');
-
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 25);
-          updateProgress(25 + pct, `Uploading to Deepgram: ${pct}%`);
-        }
-      };
 
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
