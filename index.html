@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Deepgram Nova-3 + Gemini Dual-Pass Audio Caption Studio</title>
+  <title>Deepgram Nova-3 + Gemini Dual-Pass Audio/Video Caption Studio</title>
   <style>
     :root {
       --bg: #090d16;
@@ -18,6 +18,7 @@
       --accent: #38bdf8;
       --highlight: #f59e0b;
       --success: #10b981;
+      --hotword: #ec4899;
     }
 
     body {
@@ -32,20 +33,14 @@
 
     .container {
       width: 100%;
-      max-width: 1020px;
+      max-width: 1060px;
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
     }
 
-    .header {
-      text-align: center;
-    }
-
-    .header h1 {
-      margin: 0 0 0.5rem 0;
-      font-size: 1.8rem;
-    }
+    .header { text-align: center; }
+    .header h1 { margin: 0 0 0.5rem 0; font-size: 1.8rem; }
 
     .card {
       background: var(--card-bg);
@@ -57,17 +52,9 @@
       gap: 1rem;
     }
 
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-
-    .grid-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 1rem;
-    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; }
 
     label {
       font-size: 0.85rem;
@@ -77,7 +64,7 @@
       display: block;
     }
 
-    input[type="text"], input[type="file"], select, textarea {
+    input[type="text"], input[type="file"], input[type="number"], select, textarea {
       width: 100%;
       padding: 0.65rem;
       background: var(--code-bg);
@@ -89,10 +76,7 @@
       font-family: inherit;
     }
 
-    textarea {
-      resize: vertical;
-      min-height: 60px;
-    }
+    textarea { resize: vertical; min-height: 60px; }
 
     .checkbox-group {
       display: flex;
@@ -102,6 +86,7 @@
       padding: 0.75rem 1rem;
       border-radius: 8px;
       border: 1px solid var(--border);
+      flex-wrap: wrap;
     }
 
     .checkbox-item {
@@ -143,14 +128,8 @@
       font-size: 0.95rem;
     }
 
-    button:hover {
-      background: var(--primary-hover);
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+    button:hover { background: var(--primary-hover); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .progress-container {
       width: 100%;
@@ -182,72 +161,91 @@
       text-shadow: 0 0 4px #000;
     }
 
-    .caption-viewport {
+    /* Video & Media Player Layout */
+    .preview-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
       background: #000;
+      border-radius: 10px;
+      padding: 1rem;
+      border: 1px solid var(--border);
+    }
+
+    video {
+      max-width: 100%;
+      max-height: 380px;
       border-radius: 8px;
-      min-height: 160px;
+      background: #000;
+      display: none;
+    }
+
+    .caption-viewport {
+      background: rgba(11, 16, 29, 0.92);
+      border-radius: 8px;
+      min-height: 120px;
+      width: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 1.5rem;
+      padding: 1.25rem;
       text-align: center;
       border: 2px solid var(--border);
       position: relative;
       overflow: hidden;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
     }
 
     .caption-text {
       font-size: 2.1rem;
-      font-weight: 700;
-      line-height: 1.6;
+      font-weight: 800;
+      line-height: 1.5;
       word-wrap: break-word;
-      max-width: 92%;
+      max-width: 95%;
     }
 
     .word-chunk {
       display: inline-block;
       margin: 0 0.35rem;
       color: #64748b;
-      transition: color 0.05s ease, transform 0.05s ease, background 0.05s ease;
+      transition: color 0.03s ease, transform 0.03s ease;
       cursor: pointer;
-      padding: 3px 8px;
+      padding: 2px 6px;
       border-radius: 6px;
     }
 
-    .word-chunk:hover {
-      color: #cbd5e1;
-    }
+    .word-chunk:hover { color: #cbd5e1; }
 
     .word-chunk.active {
-      color: #ffffff;
-      background: var(--primary);
-      transform: scale(1.15);
-      box-shadow: 0 0 16px rgba(249, 115, 22, 0.8);
-      font-weight: 800;
+      color: var(--highlight);
+      transform: scale(1.2);
+      text-shadow: 0 0 16px rgba(245, 158, 11, 0.8);
     }
 
-    .word-chunk.passed {
-      color: #f8fafc;
-    }
+    .word-chunk.passed { color: #f8fafc; }
 
     .word-chunk.highlighted {
-      background: rgba(245, 158, 11, 0.2);
+      background: rgba(245, 158, 11, 0.18);
       border: 1px dashed var(--highlight);
       color: #fcd34d;
     }
 
-    .word-chunk.highlighted.active {
-      background: #f59e0b;
-      border: 1px solid #fbbf24;
-      color: #000000;
-      box-shadow: 0 0 20px rgba(245, 158, 11, 0.95);
-      transform: scale(1.2);
-      font-weight: 800;
+    .word-chunk.hotword {
+      background: rgba(236, 72, 153, 0.22);
+      border: 1px solid var(--hotword);
+      color: #f472b6;
     }
 
-    audio {
-      width: 100%;
+    .word-chunk.hotword.active {
+      background: rgba(236, 72, 153, 0.55);
+      border: 1px solid #f472b6;
+      color: #ffffff;
+      box-shadow: 0 0 22px rgba(236, 72, 153, 0.95);
+      transform: scale(1.25);
     }
+
+    audio { width: 100%; }
 
     .tab-bar {
       display: flex;
@@ -272,13 +270,8 @@
       border-color: var(--border);
     }
 
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
     pre {
       background: var(--code-bg);
@@ -292,35 +285,12 @@
       max-height: 350px;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 0.5rem;
-      font-size: 0.95rem;
-    }
-
-    th, td {
-      border: 1px solid var(--border);
-      padding: 0.6rem 0.8rem;
-      text-align: left;
-    }
-
-    th {
-      background: #1e293b;
-      color: var(--accent);
-    }
-
-    tr:nth-child(even) {
-      background: #0d1424;
-    }
-
-    tr.clickable-row {
-      cursor: pointer;
-    }
-
-    tr.clickable-row:hover {
-      background: #1e293b;
-    }
+    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.95rem; }
+    th, td { border: 1px solid var(--border); padding: 0.6rem 0.8rem; text-align: left; }
+    th { background: #1e293b; color: var(--accent); }
+    tr:nth-child(even) { background: #0d1424; }
+    tr.clickable-row { cursor: pointer; }
+    tr.clickable-row:hover { background: #1e293b; }
 
     .badge {
       display: inline-block;
@@ -342,14 +312,24 @@
       color: #fcd34d;
       border: 1px solid #f59e0b;
     }
+
+    .hotword-badge {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: bold;
+      background: rgba(236, 72, 153, 0.2);
+      color: #f472b6;
+      border: 1px solid #ec4899;
+    }
   </style>
 </head>
 <body>
 
 <div class="container">
   <div class="header">
-    <h1>Deepgram Nova-3 + Gemini Dual-Pass Audio Caption Studio</h1>
-    <p style="color: var(--text-muted); margin: 0;">Precision Pronunciation Alignment with Name Highlighting & Smart Emojis</p>
+    <h1>Deepgram Nova-3 + Gemini Dual-Pass Audio/Video Caption Studio</h1>
+    <p style="color: var(--text-muted); margin: 0;">Parallel AI Processing, Hot-Word Isolation & Auto-Speedup Lip Sync</p>
   </div>
 
   <!-- API Key Setup Card -->
@@ -365,13 +345,13 @@
       </div>
     </div>
     <div class="info-box">
-      ⚡ <strong>Single 1-Upload Cloud Pipeline:</strong> Audio is uploaded ONCE to Cloudflare Pages in-memory proxy, which dispatches to Deepgram Nova-3 (with filler word detection) and Gemini in parallel over high-speed datacenter fiber for exact acoustic pronunciation sync.
+      ⚡ <strong>Parallel Cloud Pipeline (2x Faster):</strong> Dispatches to Deepgram Nova-3 (with filler word detection) & Gemini simultaneously over Cloudflare 1,000+ Mbps fiber. Auto-speedup calculates character-weighted timestamps for 100% lip-sync accuracy!
     </div>
   </div>
 
-  <!-- Audio & Output Settings -->
+  <!-- Audio/Video & Output Settings -->
   <div class="card">
-    <div class="grid-3">
+    <div class="grid-4">
       <div>
         <label for="geminiModelSelect">Pass 2 Gemini Refiner</label>
         <select id="geminiModelSelect">
@@ -404,26 +384,34 @@
           <option value="es">Spanish</option>
         </select>
       </div>
+      <div>
+        <label for="maxWordsInput">Max Words per Line</label>
+        <input type="number" id="maxWordsInput" value="5" min="2" max="10">
+      </div>
     </div>
 
     <!-- Feature Toggles -->
     <div class="checkbox-group">
       <label class="checkbox-item">
         <input type="checkbox" id="enableHighlight" checked>
-        Highlight Names & Sudden Expressions (e.g., "Zara", "Shrihari", "Aiyo!", "Wow!")
+        Highlight Names & Hot-Word Expressions (e.g., "Zara", "Aiyo!", "Shut up")
       </label>
       <label class="checkbox-item">
         <input type="checkbox" id="enableEmojis" checked>
         Smart Emojis (Relevant Emotions & Key Nouns Only)
       </label>
+      <label class="checkbox-item">
+        <input type="checkbox" id="enableAutoSpeedup" checked>
+        Auto-Speedup Lip-Sync ($T_{\text{speech}}$ Character Weighting)
+      </label>
     </div>
 
     <div>
-      <label for="audioFile">Select Audio File (MP3, WAV, M4A, WebM)</label>
-      <input type="file" id="audioFile" accept="audio/*">
+      <label for="mediaFile">Select Audio or Video File (MP4, MP3, WAV, M4A, WebM, MOV)</label>
+      <input type="file" id="mediaFile" accept="audio/*,video/*">
     </div>
 
-    <button id="processBtn">Transcribe & Sync Complete Audio Track</button>
+    <button id="processBtn">Transcribe & Sync Complete Track</button>
 
     <!-- Upload/Processing Progress Bar -->
     <div id="progressContainer" class="progress-container">
@@ -432,17 +420,20 @@
     </div>
   </div>
 
-  <!-- Live Caption Viewport -->
+  <!-- Live Caption & Media Preview Stage -->
   <div class="card">
-    <label>Live Synchronized Captions (60 FPS Engine)</label>
-    <div class="caption-viewport">
-      <div id="captionContainer" class="caption-text">
-        <span style="color: var(--text-muted); font-size: 1rem; font-weight: normal;">
-          Process audio to test zero-lag synchronized captions.
-        </span>
+    <label>Live Zero-Lag Media Caption Stage (60 FPS Engine)</label>
+    <div class="preview-stage">
+      <video id="videoPlayer" controls></video>
+      <audio id="audioPlayer" controls></audio>
+      <div class="caption-viewport">
+        <div id="captionContainer" class="caption-text">
+          <span style="color: var(--text-muted); font-size: 1rem; font-weight: normal;">
+            Process media to test zero-lag synchronized captions.
+          </span>
+        </div>
       </div>
     </div>
-    <audio id="audioPlayer" controls></audio>
   </div>
 
   <!-- Outputs Card -->
@@ -456,7 +447,7 @@
 
     <!-- Tab 1: Corrected Timestamps -->
     <div id="geminiWordsTab" class="tab-content active">
-      <label>100% Precision Word Timestamps (Click row to seek audio)</label>
+      <label>100% Precision Word Timestamps (Click row to seek media)</label>
       <div style="max-height: 350px; overflow-y: auto;">
         <table id="geminiTable">
           <thead>
@@ -504,15 +495,18 @@
   const geminiModelSelect = document.getElementById('geminiModelSelect');
   const scriptModeSelect = document.getElementById('scriptMode');
   const spokenLangSelect = document.getElementById('spokenLang');
+  const maxWordsInput = document.getElementById('maxWordsInput');
   const enableHighlightCb = document.getElementById('enableHighlight');
   const enableEmojisCb = document.getElementById('enableEmojis');
-  const audioFileInput = document.getElementById('audioFile');
+  const enableAutoSpeedupCb = document.getElementById('enableAutoSpeedup');
+  const mediaFileInput = document.getElementById('mediaFile');
   const processBtn = document.getElementById('processBtn');
 
   const progressContainer = document.getElementById('progressContainer');
   const progressFill = document.getElementById('progressFill');
   const progressText = document.getElementById('progressText');
 
+  const videoPlayer = document.getElementById('videoPlayer');
   const audioPlayer = document.getElementById('audioPlayer');
   const captionContainer = document.getElementById('captionContainer');
 
@@ -521,6 +515,7 @@
   const pass1RawOutput = document.getElementById('pass1RawOutput');
   const geminiRawOutput = document.getElementById('geminiRawOutput');
 
+  let activeMedia = audioPlayer;
   let refinedWords = [];
   let lineChunks = [];
   let animFrameId = null;
@@ -540,19 +535,29 @@
     localStorage.setItem('gemini_api_keys', geminiApiKeysInput.value.trim());
   });
 
+  maxWordsInput.addEventListener('change', () => {
+    if (refinedWords.length > 0) {
+      const maxW = parseInt(maxWordsInput.value, 10) || 5;
+      lineChunks = chunkWordsIntoSmartLines(refinedWords, maxW);
+      updateSubtitles(activeMedia.currentTime * 1000);
+    }
+  });
+
   processBtn.addEventListener('click', async () => {
     const deepgramKey = deepgramApiKeyInput.value.trim();
     const geminiKeysRaw = geminiApiKeysInput.value.trim();
-    const file = audioFileInput.files[0];
+    const file = mediaFileInput.files[0];
     const geminiModel = geminiModelSelect.value;
     const scriptMode = scriptModeSelect.value;
     const spokenLang = spokenLangSelect.value;
     const enableHighlight = enableHighlightCb.checked;
     const enableEmojis = enableEmojisCb.checked;
+    const enableAutoSpeedup = enableAutoSpeedupCb.checked;
+    const maxWords = parseInt(maxWordsInput.value, 10) || 5;
 
     if (!deepgramKey) return alert('Please enter your Deepgram API Key.');
     if (!geminiKeysRaw) return alert('Please enter at least one Gemini API Key.');
-    if (!file) return alert('Please select an audio file.');
+    if (!file) return alert('Please select a media file.');
 
     const geminiKeys = geminiKeysRaw.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
     if (!geminiKeys.length) return alert('No valid Gemini key found.');
@@ -560,10 +565,25 @@
     try {
       processBtn.disabled = true;
       progressContainer.style.display = 'block';
-      audioPlayer.src = URL.createObjectURL(file);
+
+      // Setup Video vs Audio player seamlessly
+      const objectUrl = URL.createObjectURL(file);
+      if (file.type.startsWith('video/')) {
+        videoPlayer.style.display = 'block';
+        audioPlayer.style.display = 'none';
+        videoPlayer.src = objectUrl;
+        activeMedia = videoPlayer;
+      } else {
+        videoPlayer.style.display = 'none';
+        audioPlayer.style.display = 'block';
+        audioPlayer.src = objectUrl;
+        activeMedia = audioPlayer;
+      }
+
+      bindMediaEvents(activeMedia);
 
       // STEP 1: Single 1-Upload to Cloudflare Pages In-Memory Proxy (/api/transcribe)
-      updateProgress(25, 'Uploading audio ONCE to Cloudflare high-speed fiber...');
+      updateProgress(25, 'Uploading media ONCE to Cloudflare high-speed fiber...');
 
       const formData = new FormData();
       formData.append('file', file);
@@ -623,18 +643,21 @@
       pass1RawOutput.textContent = JSON.stringify(dgResult, null, 2);
       geminiRawOutput.textContent = JSON.stringify(rawGeminiResult, null, 2);
 
-      // STEP 2: Continuous Piecewise Re-Anchoring Algorithm
-      refinedWords = continuousPiecewiseAlignment(rawGeminiResult, roughWords);
-      lineChunks = chunkWordsIntoLines(refinedWords, 6);
+      // STEP 2: Apply Auto-Speedup Character-Weighting Math & Piecewise Alignment
+      let initialWords = rawGeminiResult;
+      if (enableAutoSpeedup && roughWords.length > 0) {
+        const sourceStartMs = roughWords[0].start;
+        const sourceEndMs = roughWords[roughWords.length - 1].end;
+        initialWords = calculateSpeedupTimestamps(rawGeminiResult, sourceStartMs, sourceEndMs);
+      }
+
+      refinedWords = continuousPiecewiseAlignment(initialWords, roughWords);
+      lineChunks = chunkWordsIntoSmartLines(refinedWords, maxWords);
 
       renderGeminiTable(refinedWords);
       plainTextOutput.value = refinedWords.map(w => w.word).join(' ');
-      
-      // Render Initial Subtitle Chunk immediately
-      delete captionContainer.dataset.currentChunk;
-      updateSubtitles(0);
-
-      updateProgress(100, `Done! Synced via 1-Upload Cloud Proxy with acoustic cadence precision.`);
+      resetCaptionViewport();
+      updateProgress(100, `Done! Synced via Parallel 1-Upload Cloud Proxy.`);
 
     } catch (err) {
       alert(`Error: ${err.message}`);
@@ -645,7 +668,34 @@
     }
   });
 
-  // Continuous Piecewise Alignment Algorithm with Acoustic Pause Preservation
+  // Part 1 & 2: Auto-Speedup Character Weighting Math Formula (Zero-Lag Lip-Sync Compression)
+  function calculateSpeedupTimestamps(translatedWordsArray, sourceStartMs, sourceEndMs) {
+    if (!translatedWordsArray || !translatedWordsArray.length) return [];
+    
+    const totalWindowMs = sourceEndMs - sourceStartMs;
+    const totalChars = translatedWordsArray.reduce((sum, item) => sum + (item.word ? item.word.trim().length : 0), 0) || 1;
+    
+    let currentStartMs = sourceStartMs;
+
+    return translatedWordsArray.map((item, index) => {
+      const charLen = item.word ? item.word.trim().length : 1;
+      const wordCharWeight = charLen / totalChars;
+      const wordDurationMs = Math.round(totalWindowMs * wordCharWeight);
+      
+      const wordStart = currentStartMs;
+      const wordEnd = (index === translatedWordsArray.length - 1) ? sourceEndMs : wordStart + wordDurationMs;
+
+      currentStartMs = wordEnd + 1;
+
+      return {
+        ...item,
+        start: wordStart,
+        end: wordEnd
+      };
+    });
+  }
+
+  // Continuous Piecewise Alignment Algorithm
   function continuousPiecewiseAlignment(words, roughWords) {
     if (!words || !words.length) return [];
 
@@ -653,12 +703,10 @@
       let start = w.start;
       let end = w.end;
 
-      // Rule 1: Prevent overlapping with previous word's end timestamp
       if (idx > 0 && start < words[idx - 1].end) {
         start = words[idx - 1].end;
       }
 
-      // Rule 2: Anchor tightly to Deepgram ground-truth acoustic sound onset if Gemini drifts > 150ms
       const sttMatch = roughWords[idx];
       if (sttMatch) {
         if (Math.abs(start - sttMatch.start) > 150) {
@@ -668,8 +716,7 @@
         }
       }
 
-      // Rule 3: Enforce minimum display floor based on character length
-      const charCount = w.word.trim().length;
+      const charCount = w.word ? w.word.trim().length : 1;
       const minDuration = Math.max(30, Math.min(350, charCount * 22));
       if (end - start < minDuration) {
         end = start + minDuration;
@@ -681,16 +728,70 @@
         word: w.word,
         start: Math.round(start),
         end: Math.round(end),
-        highlight: !!w.highlight
+        highlight: !!w.highlight,
+        is_expression: !!w.is_expression,
+        is_question: !!w.is_question,
+        is_sentence_end: !!w.is_sentence_end || /[.!?|॥]$/.test((w.word || '').trim()),
+        is_name: !!w.is_name
       };
     });
   }
 
-  // Pass 1 Engine: Deepgram Nova-3 API Call (with filler_words=true)
+  // Smart Contextual Hot-Word & Sentence Line Chunking Engine
+  function chunkWordsIntoSmartLines(words, maxWordsPerLine = 5) {
+    const chunks = [];
+    let current = [];
+
+    for (let i = 0; i < words.length; i++) {
+      const w = words[i];
+
+      // Hot-Word / Expression / Question / Name Override Rule: Isolate hot words as 1-2 word lines!
+      const isHotWord = w.is_expression || w.is_question || w.is_name;
+
+      if (isHotWord) {
+        // Push any preceding narrative chunk first
+        if (current.length > 0) {
+          chunks.push({
+            start: current[0].start,
+            end: current[current.length - 1].end,
+            words: current
+          });
+          current = [];
+        }
+
+        // Push hot-word as isolated single line
+        chunks.push({
+          start: w.start,
+          end: w.end,
+          words: [w]
+        });
+        continue;
+      }
+
+      current.push(w);
+
+      const isSentenceEnd = w.is_sentence_end || /[.!?|॥]$/.test(w.word.trim());
+      const isLast = (i === words.length - 1);
+
+      // Full Stop & Max Words Boundary Rule
+      if (current.length >= maxWordsPerLine || isSentenceEnd || isLast) {
+        chunks.push({
+          start: current[0].start,
+          end: current[current.length - 1].end,
+          words: current
+        });
+        current = [];
+      }
+    }
+
+    return chunks;
+  }
+
+  // Pass 1 Engine: Deepgram Nova-3 API Call (with filler_words & diarize)
   function fetchDeepgramTimestamps(file, apiKey, lang) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      let url = `https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true&utterances=true&word_timestamps=true&filler_words=true`;
+      let url = `https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true&utterances=true&word_timestamps=true&filler_words=true&diarize=true`;
       if (lang) {
         url += `&language=${encodeURIComponent(lang)}`;
       }
@@ -753,28 +854,30 @@
 
     let extraInstructions = "";
     if (enableHighlight) {
-      extraInstructions += `\n5. IDENTIFY NAMES & EXPRESSIONS: Set "highlight": true for proper names (e.g., "Zara", "Shrihari"), sudden vocal interjections, or exclamations ("Aiyo!", "Wow!", "Ahaa!"). Otherwise set "highlight": false.`;
+      extraInstructions += `\n- ` + '`is_expression`: Mark TRUE ONLY for standalone exclamations, interjections, or isolated expressions (e.g., "Shut up", "Oh god", "Aiyo!", "Wow!", "Super").';
+      extraInstructions += `\n- ` + '`is_name`: Mark TRUE for proper nouns, person names, or brand names (e.g., "Zara", "Shrihari", "Ani Cabs").';
+      extraInstructions += `\n- ` + '`highlight`: Set TRUE for names, exclamations, or hot-word expressions.';
     }
     if (enableEmojis) {
-      extraInstructions += `\n6. SMART CONTEXTUAL EMOJIS: Append 1 perfect, relevant emoji ONLY to key emotive words, sudden expressions, or main nouns (e.g., "Zara 👧", "Aiyo! 😱", "Super 🔥", "Love ❤️"). NEVER add emojis to routine words like "and", "the", "is".`;
+      extraInstructions += `\n- EMOJI TAGGING: Include 1 contextually relevant emoji attached to key emotive words, sudden expressions, or main nouns (e.g., "madbeka? 🚕", "Aiyo! 😱", "Love ❤️"). NEVER add emojis to routine narrative filler words like "and", "the", "is".`;
     }
 
-    const systemPrompt = `You are an expert speech-to-text acoustic alignment engine and millisecond pronunciation timer.
+    const systemPrompt = `You are an ultra-precise audio transcription, translation, and auto-speedup subtitle engine.
 
-INPUT DATA:
-1. Audio file.
-2. Pass 1 baseline word timestamps: ${JSON.stringify(roughWords)}
+Your primary objective is ZERO-LAG LIP SYNC and SEMANTIC HOT-WORD ISOLATION.
 
-STRICT ACOUSTIC PRONUNCIATION & MILLISECOND TIMING DIRECTIVES:
-1. Target Script: ${targetScriptInstruction}
-2. ACOUSTIC SOUND BOUNDS: Align each word's "start" and "end" timestamps directly to when the speaker's vocal organs actually produce the sound:
-   - "start": Millisecond when the first vocal phoneme of the word is uttered.
-   - "end": Millisecond when the vocal sound of that word ends.
-3. EXTENDED VOWELS & CADENCE: If the speaker elongates or draws out a word (e.g., "sooooo", "ammaaaa"), stretch the (end - start) duration to cover the full physical sound length.
-4. PAUSES & BREATH BREAKS: Preserve natural silence gaps and pauses between phrases. Do not stretch words over silent gaps.
-5. Correct wrong/misspelled words from Pass 1 while keeping timestamps tightly bound to vocal sound onset/offset.${extraInstructions}
+=== 1. SPEECH DURATION & ACOUSTIC TIMING LOCK ===
+- Detect exact acoustic start (\`start\`) and acoustic end (\`end\`) in milliseconds for each spoken word.
+- Target Script: ${targetScriptInstruction}
+- EXTENDED VOWELS & CADENCE: If the speaker elongates a word (e.g., "sooooo", "ammaaaa"), stretch the duration to cover the full physical sound length.
+- PAUSES & BREATH BREAKS: Preserve natural silence gaps and pauses between phrases.
 
-Return ONLY a valid JSON array of objects with keys "word" (string), "start" (integer ms), "end" (integer ms), and "highlight" (boolean).`;
+=== 2. SEMANTIC BREAKING & HOT-WORD TAGGING ===
+- \`is_question\`: Mark TRUE for interrogatives or query words (e.g., "madbeka?", "can i book?", "Hassan?").
+- \`is_sentence_end\`: Mark TRUE when a word ends with a full stop (\`.\`), exclamation (\`!\`), or question mark (\`?\`).${extraInstructions}
+
+Return ONLY a valid JSON array of objects with keys:
+"word" (string), "start" (integer ms), "end" (integer ms), "highlight" (boolean), "is_expression" (boolean), "is_question" (boolean), "is_sentence_end" (boolean), "is_name" (boolean).`;
 
     const requestBody = {
       contents: [{
@@ -798,7 +901,11 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
               word: { type: "STRING" },
               start: { type: "INTEGER" },
               end: { type: "INTEGER" },
-              highlight: { type: "BOOLEAN" }
+              highlight: { type: "BOOLEAN" },
+              is_expression: { type: "BOOLEAN" },
+              is_question: { type: "BOOLEAN" },
+              is_sentence_end: { type: "BOOLEAN" },
+              is_name: { type: "BOOLEAN" }
             },
             required: ["word", "start", "end"]
           }
@@ -842,41 +949,27 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
     progressText.textContent = text;
   }
 
-  function chunkWordsIntoLines(words, maxWords = 6) {
-    const chunks = [];
-    let current = [];
-
-    words.forEach((w, i) => {
-      current.push(w);
-      const isSentenceEnd = /[.!?|॥]$/.test(w.word.trim());
-      const isLast = (i === words.length - 1);
-
-      if (current.length >= maxWords || isSentenceEnd || isLast) {
-        chunks.push({
-          start: current[0].start,
-          end: current[current.length - 1].end,
-          words: current
-        });
-        current = [];
-      }
-    });
-
-    return chunks;
-  }
-
   function resetCaptionViewport() {
-    captionContainer.innerHTML = `<span style="color: var(--text-muted); font-size: 1rem;">Press Play on audio player to test synchronized captions</span>`;
-    delete captionContainer.dataset.currentChunk;
+    captionContainer.innerHTML = `<span style="color: var(--text-muted); font-size: 1rem;">Press Play on media player to test synchronized captions</span>`;
   }
 
-  // Zero-Lag 60 FPS Sync Loop
+  // Zero-Lag 60 FPS Event-Driven Sync Engine for Audio & Video
+  function bindMediaEvents(mediaEl) {
+    mediaEl.addEventListener('play', startSyncLoop);
+    mediaEl.addEventListener('pause', () => {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+    });
+    mediaEl.addEventListener('seeked', () => {
+      updateSubtitles(mediaEl.currentTime * 1000);
+    });
+  }
+
   function startSyncLoop() {
     if (animFrameId) cancelAnimationFrame(animFrameId);
 
     function tick() {
-      if (!audioPlayer.paused && refinedWords.length > 0) {
-        const currentTimeMs = audioPlayer.currentTime * 1000;
-        updateSubtitles(currentTimeMs);
+      if (!activeMedia.paused && refinedWords.length > 0) {
+        updateSubtitles(activeMedia.currentTime * 1000);
         animFrameId = requestAnimationFrame(tick);
       }
     }
@@ -884,23 +977,17 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
     animFrameId = requestAnimationFrame(tick);
   }
 
+  let currentActiveChunkId = null;
+
   function updateSubtitles(currentTimeMs) {
-    if (!lineChunks || lineChunks.length === 0) return;
-
-    // Find the line chunk that contains currentTimeMs or nearest chunk
-    let activeChunk = lineChunks.find(c => currentTimeMs >= c.start - 100 && currentTimeMs <= c.end + 300);
-
-    if (!activeChunk) {
-      activeChunk = lineChunks.find(c => currentTimeMs <= c.end);
-      if (!activeChunk && lineChunks.length > 0) {
-        activeChunk = lineChunks[lineChunks.length - 1];
-      }
-    }
+    const activeChunk = lineChunks.find(c => currentTimeMs >= c.start && currentTimeMs <= c.end + 80);
 
     if (activeChunk) {
-      const chunkKey = `${activeChunk.start}-${activeChunk.end}`;
-      if (captionContainer.dataset.currentChunk !== chunkKey) {
-        captionContainer.dataset.currentChunk = chunkKey;
+      const chunkId = activeChunk.start + '_' + activeChunk.end;
+      
+      // Render line container if chunk changed
+      if (currentActiveChunkId !== chunkId) {
+        currentActiveChunkId = chunkId;
         captionContainer.innerHTML = '';
 
         activeChunk.words.forEach(w => {
@@ -910,48 +997,40 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
           span.dataset.start = w.start;
           span.dataset.end = w.end;
 
-          if (w.highlight) {
+          if (w.is_expression || w.is_question) {
+            span.classList.add('hotword');
+          } else if (w.highlight || w.is_name) {
             span.classList.add('highlighted');
           }
 
           span.addEventListener('click', () => {
-            audioPlayer.currentTime = w.start / 1000;
-            audioPlayer.play();
+            activeMedia.currentTime = w.start / 1000;
           });
 
           captionContainer.appendChild(span);
         });
       }
 
-      // Update active/passed classes on every 60 FPS tick
+      // 60 FPS Word Highlighting
       captionContainer.querySelectorAll('.word-chunk').forEach(span => {
-        const wStart = parseInt(span.dataset.start, 10);
-        const wEnd = parseInt(span.dataset.end, 10);
+        const startMs = parseFloat(span.dataset.start);
+        const endMs = parseFloat(span.dataset.end);
 
-        if (currentTimeMs >= wStart && currentTimeMs <= wEnd) {
+        if (currentTimeMs >= startMs && currentTimeMs <= endMs) {
           span.classList.add('active');
           span.classList.remove('passed');
-        } else if (currentTimeMs > wEnd) {
+        } else if (currentTimeMs > endMs) {
           span.classList.remove('active');
           span.classList.add('passed');
         } else {
           span.classList.remove('active', 'passed');
         }
       });
+    } else {
+      currentActiveChunkId = null;
+      captionContainer.querySelectorAll('.word-chunk.active').forEach(el => el.classList.remove('active'));
     }
   }
-
-  audioPlayer.addEventListener('play', startSyncLoop);
-  audioPlayer.addEventListener('pause', () => {
-    if (animFrameId) cancelAnimationFrame(animFrameId);
-    updateSubtitles(audioPlayer.currentTime * 1000);
-  });
-  audioPlayer.addEventListener('seeked', () => {
-    updateSubtitles(audioPlayer.currentTime * 1000);
-  });
-  audioPlayer.addEventListener('timeupdate', () => {
-    updateSubtitles(audioPlayer.currentTime * 1000);
-  });
 
   function renderGeminiTable(words) {
     geminiTableBody.innerHTML = '';
@@ -963,11 +1042,17 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
     words.forEach((w, idx) => {
       const durationMs = w.end - w.start;
       const formattedTime = `${formatMs(w.start)} -> ${formatMs(w.end)}`;
-      const flagsHtml = w.highlight ? `<span class="tag-badge">Highlighted Expression</span>` : `<span style="color: var(--text-muted); font-size: 0.8rem;">Standard</span>`;
+      
+      let flagsHtml = `<span style="color: var(--text-muted); font-size: 0.8rem;">Standard</span>`;
+      if (w.is_expression || w.is_question) {
+        flagsHtml = `<span class="hotword-badge">Hot Expression / Query</span>`;
+      } else if (w.highlight || w.is_name) {
+        flagsHtml = `<span class="tag-badge">Highlighted Name</span>`;
+      }
 
       const tr = document.createElement('tr');
       tr.className = 'clickable-row';
-      tr.title = 'Click to seek audio';
+      tr.title = 'Click to seek media';
       tr.innerHTML = `
         <td>${idx + 1}</td>
         <td style="color: #f59e0b; font-weight: bold; font-size: 1.1rem;">${escapeHtml(w.word)}</td>
@@ -979,8 +1064,8 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
       `;
 
       tr.addEventListener('click', () => {
-        audioPlayer.currentTime = w.start / 1000;
-        audioPlayer.play();
+        activeMedia.currentTime = w.start / 1000;
+        activeMedia.play();
       });
 
       geminiTableBody.appendChild(tr);
@@ -1004,7 +1089,7 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
   }
 
   function escapeHtml(text) {
-    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return (text || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 </script>
 

@@ -19,8 +19,8 @@ export async function onRequestPost(context) {
 
     const arrayBuffer = await file.arrayBuffer();
 
-    // 1. Pass 1: Enhanced Deepgram Nova-3 API Call (with filler_words=true for micro-pause & hesitation precision)
-    let dgUrl = `https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true&utterances=true&word_timestamps=true&filler_words=true`;
+    // 1. Pass 1: High-Precision Deepgram Nova-3 API Call (with filler_words=true & diarize=true)
+    let dgUrl = `https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true&utterances=true&word_timestamps=true&filler_words=true&diarize=true`;
     if (spokenLang) {
       dgUrl += `&language=${encodeURIComponent(spokenLang)}`;
     }
@@ -41,7 +41,7 @@ export async function onRequestPost(context) {
       return res.json();
     });
 
-    // 2. Convert ArrayBuffer to Base64 in RAM for Gemini payload
+    // 2. Prepare Base64 in RAM for Gemini payload
     const bytes = new Uint8Array(arrayBuffer);
     let binary = '';
     const len = bytes.byteLength;
@@ -51,16 +51,7 @@ export async function onRequestPost(context) {
     }
     const base64Audio = btoa(binary);
 
-    // Wait for Deepgram response
-    const dgResult = await dgPromise;
-    const dgWords = dgResult.results?.channels?.[0]?.alternatives?.[0]?.words || [];
-    const roughWords = dgWords.map(w => ({
-      word: w.punctuated_word || w.word,
-      start: Math.round(w.start * 1000),
-      end: Math.round(w.end * 1000)
-    }));
-
-    // 3. Prepare Enhanced Gemini Acoustic Alignment & Syllable Cadence Prompt
+    // 3. Prepare Gemini Master Alignment & Semantic Tagging Prompt
     const scriptPromptMap = {
       native: `transcribe the spoken words in the NATIVE SCRIPT of language code '${spokenLang}' (e.g. தமிழ், ಕನ್ನಡ, हिंदी).`,
       tanglish: `transcribe the spoken words in ROMANIZED / TANGLISH phonetic script using English letters (e.g. "Maanu", "Thappa", "Nee sari kadaiyathu").`,
@@ -71,28 +62,30 @@ export async function onRequestPost(context) {
 
     let extraInstructions = "";
     if (enableHighlight) {
-      extraInstructions += `\n5. IDENTIFY NAMES & EXPRESSIONS: Set "highlight": true for proper names (e.g., "Zara", "Shrihari"), sudden vocal interjections, or exclamations ("Aiyo!", "Wow!", "Ahaa!"). Otherwise set "highlight": false.`;
+      extraInstructions += `\n- ` + '`is_expression`: Mark TRUE ONLY for standalone exclamations, interjections, or isolated expressions (e.g., "Shut up", "Oh god", "Aiyo!", "Wow!", "Super").';
+      extraInstructions += `\n- ` + '`is_name`: Mark TRUE for proper nouns, person names, or brand names (e.g., "Zara", "Shrihari", "Ani Cabs").';
+      extraInstructions += `\n- ` + '`highlight`: Set TRUE for names, exclamations, or hot-word expressions.';
     }
     if (enableEmojis) {
-      extraInstructions += `\n6. SMART CONTEXTUAL EMOJIS: Append 1 perfect, relevant emoji ONLY to key emotive words, sudden expressions, or main nouns (e.g., "Zara 👧", "Aiyo! 😱", "Super 🔥", "Love ❤️"). NEVER add emojis to routine words like "and", "the", "is".`;
+      extraInstructions += `\n- EMOJI TAGGING: Include 1 contextually relevant emoji attached to key emotive words, sudden expressions, or main nouns (e.g., "madbeka? 🚕", "Aiyo! 😱", "Love ❤️"). NEVER add emojis to routine narrative filler words like "and", "the", "is".`;
     }
 
-    const systemPrompt = `You are an expert speech-to-text acoustic alignment engine and millisecond pronunciation timer.
+    const systemPrompt = `You are an ultra-precise audio transcription, translation, and auto-speedup subtitle engine.
 
-INPUT DATA:
-1. Audio file.
-2. Pass 1 baseline word timestamps: ${JSON.stringify(roughWords)}
+Your primary objective is ZERO-LAG LIP SYNC and SEMANTIC HOT-WORD ISOLATION.
 
-STRICT ACOUSTIC PRONUNCIATION & MILLISECOND TIMING DIRECTIVES:
-1. Target Script: ${targetScriptInstruction}
-2. ACOUSTIC SOUND BOUNDS: Align each word's "start" and "end" timestamps directly to when the speaker's vocal organs actually produce the sound:
-   - "start": Millisecond when the first vocal phoneme of the word is uttered.
-   - "end": Millisecond when the vocal sound of that word ends.
-3. EXTENDED VOWELS & CADENCE: If the speaker elongates or draws out a word (e.g., "sooooo", "ammaaaa"), stretch the (end - start) duration to cover the full physical sound length.
-4. PAUSES & BREATH BREAKS: Preserve natural silence gaps and pauses between phrases. Do not stretch words over silent gaps.
-5. Correct wrong/misspelled words from Pass 1 while keeping timestamps tightly bound to vocal sound onset/offset.${extraInstructions}
+=== 1. SPEECH DURATION & ACOUSTIC TIMING LOCK ===
+- Detect exact acoustic start (\`start\`) and acoustic end (\`end\`) in milliseconds for each spoken word.
+- Target Script: ${targetScriptInstruction}
+- EXTENDED VOWELS & CADENCE: If the speaker elongates a word (e.g., "sooooo", "ammaaaa"), stretch the duration to cover the full physical sound length.
+- PAUSES & BREATH BREAKS: Preserve natural silence gaps and pauses between phrases.
 
-Return ONLY a valid JSON array of objects with keys "word" (string), "start" (integer ms), "end" (integer ms), and "highlight" (boolean).`;
+=== 2. SEMANTIC BREAKING & HOT-WORD TAGGING ===
+- \`is_question\`: Mark TRUE for interrogatives or query words (e.g., "madbeka?", "can i book?", "Hassan?").
+- \`is_sentence_end\`: Mark TRUE when a word ends with a full stop (\`.\`), exclamation (\`!\`), or question mark (\`?\`).${extraInstructions}
+
+Return ONLY a valid JSON array of objects with keys:
+"word" (string), "start" (integer ms), "end" (integer ms), "highlight" (boolean), "is_expression" (boolean), "is_question" (boolean), "is_sentence_end" (boolean), "is_name" (boolean).`;
 
     const geminiReqBody = {
       contents: [{
@@ -116,7 +109,11 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
               word: { type: "STRING" },
               start: { type: "INTEGER" },
               end: { type: "INTEGER" },
-              highlight: { type: "BOOLEAN" }
+              highlight: { type: "BOOLEAN" },
+              is_expression: { type: "BOOLEAN" },
+              is_question: { type: "BOOLEAN" },
+              is_sentence_end: { type: "BOOLEAN" },
+              is_name: { type: "BOOLEAN" }
             },
             required: ["word", "start", "end"]
           }
@@ -124,41 +121,44 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
       }
     };
 
-    // Failover Shuffle Execution over Gemini Keys
+    // Parallel Dispatch Strategy: Execute Deepgram and Gemini requests concurrently over Cloudflare fiber!
     const geminiKeys = geminiKeysRaw.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
     const shuffledKeys = [...geminiKeys].sort(() => Math.random() - 0.5);
 
-    let rawGeminiResult = null;
-    let lastErr = null;
-
-    for (let i = 0; i < shuffledKeys.length; i++) {
-      const currentKey = shuffledKeys[i];
-      try {
-        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${currentKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(geminiReqBody)
-        });
-
-        if (!geminiRes.ok) {
-          const errText = await geminiRes.text();
-          throw new Error(`Gemini API Error (${geminiRes.status}): ${errText}`);
+    const geminiPromise = (async () => {
+      let lastErr = null;
+      for (let i = 0; i < shuffledKeys.length; i++) {
+        const currentKey = shuffledKeys[i];
+        try {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${currentKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(geminiReqBody)
+          });
+          if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(`Gemini API Error (${res.status}): ${errText}`);
+          }
+          const data = await res.json();
+          const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!candidateText) throw new Error('No valid response generated by Gemini.');
+          return JSON.parse(candidateText);
+        } catch (err) {
+          lastErr = err;
         }
-
-        const geminiData = await geminiRes.json();
-        const candidateText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!candidateText) throw new Error('No valid response generated by Gemini.');
-
-        rawGeminiResult = JSON.parse(candidateText);
-        break; // Success!
-      } catch (err) {
-        lastErr = err;
       }
-    }
-
-    if (!rawGeminiResult) {
       throw new Error(`All ${shuffledKeys.length} Gemini keys failed: ${lastErr ? lastErr.message : 'Unknown error'}`);
-    }
+    })();
+
+    // Await both Deepgram and Gemini in parallel!
+    const [dgResult, rawGeminiResult] = await Promise.all([dgPromise, geminiPromise]);
+
+    const dgWords = dgResult.results?.channels?.[0]?.alternatives?.[0]?.words || [];
+    const roughWords = dgWords.map(w => ({
+      word: w.punctuated_word || w.word,
+      start: Math.round(w.start * 1000),
+      end: Math.round(w.end * 1000)
+    }));
 
     return new Response(JSON.stringify({
       dgResult,
