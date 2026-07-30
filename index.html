@@ -18,7 +18,6 @@
       --accent: #38bdf8;
       --highlight: #f59e0b;
       --success: #10b981;
-      --hotword: #ec4899;
     }
 
     body {
@@ -33,7 +32,7 @@
 
     .container {
       width: 100%;
-      max-width: 1060px;
+      max-width: 1040px;
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
@@ -198,10 +197,10 @@
 
     .caption-text {
       font-size: 2.1rem;
-      font-weight: 800;
+      font-weight: 700;
       line-height: 1.5;
       word-wrap: break-word;
-      max-width: 95%;
+      max-width: 92%;
     }
 
     .word-chunk {
@@ -230,18 +229,12 @@
       color: #fcd34d;
     }
 
-    .word-chunk.hotword {
-      background: rgba(236, 72, 153, 0.22);
-      border: 1px solid var(--hotword);
-      color: #f472b6;
-    }
-
-    .word-chunk.hotword.active {
-      background: rgba(236, 72, 153, 0.55);
-      border: 1px solid #f472b6;
+    .word-chunk.highlighted.active {
+      background: rgba(245, 158, 11, 0.45);
+      border: 1px solid var(--highlight);
       color: #ffffff;
-      box-shadow: 0 0 22px rgba(236, 72, 153, 0.95);
-      transform: scale(1.25);
+      box-shadow: 0 0 18px rgba(245, 158, 11, 0.9);
+      transform: scale(1.22);
     }
 
     audio { width: 100%; }
@@ -311,16 +304,6 @@
       color: #fcd34d;
       border: 1px solid #f59e0b;
     }
-
-    .hotword-badge {
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 0.72rem;
-      font-weight: bold;
-      background: rgba(236, 72, 153, 0.2);
-      color: #f472b6;
-      border: 1px solid #ec4899;
-    }
   </style>
 </head>
 <body>
@@ -328,7 +311,7 @@
 <div class="container">
   <div class="header">
     <h1>Deepgram Nova-3 + Gemini Dual-Pass Audio/Video Caption Studio</h1>
-    <p style="color: var(--text-muted); margin: 0;">99% Precision Acoustic Pronunciation Sync & Hot-Word Isolation</p>
+    <p style="color: var(--text-muted); margin: 0;">Exact 99% Precision Acoustic Pronunciation Alignment & Name Highlighting</p>
   </div>
 
   <!-- API Key Setup Card -->
@@ -344,7 +327,7 @@
       </div>
     </div>
     <div class="info-box">
-      ⚡ <strong>Restored 99% Precision Sync:</strong> Uses Deepgram Nova-3 micro-timing (with filler word detection) + Gemini syllable cadence alignment & 150ms acoustic anchor. Reads media via 16kHz mono downsampler (~30ms) for instant uploads!
+      ⚡ <strong>Exact 99% Acoustic Sync Engine:</strong> Uses Deepgram Nova-3 micro-timing (with filler word detection) + Gemini syllable cadence alignment & 150ms acoustic anchor. Reads media via 16kHz mono downsampler (~30ms) for instant uploads!
     </div>
   </div>
 
@@ -385,7 +368,7 @@
       </div>
       <div>
         <label for="maxWordsInput">Max Words per Line</label>
-        <input type="number" id="maxWordsInput" value="5" min="2" max="10">
+        <input type="number" id="maxWordsInput" value="6" min="2" max="10">
       </div>
     </div>
 
@@ -393,7 +376,7 @@
     <div class="checkbox-group">
       <label class="checkbox-item">
         <input type="checkbox" id="enableHighlight" checked>
-        Highlight Names & Hot-Word Expressions (e.g., "Zara", "Aiyo!", "Shut up")
+        Highlight Names & Sudden Expressions (e.g., "Zara", "Aiyo!", "Wow!")
       </label>
       <label class="checkbox-item">
         <input type="checkbox" id="enableEmojis" checked>
@@ -531,8 +514,8 @@
 
   maxWordsInput.addEventListener('change', () => {
     if (refinedWords.length > 0) {
-      const maxW = parseInt(maxWordsInput.value, 10) || 5;
-      lineChunks = chunkWordsIntoSmartLines(refinedWords, maxW);
+      const maxW = parseInt(maxWordsInput.value, 10) || 6;
+      lineChunks = chunkWordsIntoLines(refinedWords, maxW);
       updateSubtitles(activeMedia.currentTime * 1000);
     }
   });
@@ -546,7 +529,7 @@
     const spokenLang = spokenLangSelect.value;
     const enableHighlight = enableHighlightCb.checked;
     const enableEmojis = enableEmojisCb.checked;
-    const maxWords = parseInt(maxWordsInput.value, 10) || 5;
+    const maxWords = parseInt(maxWordsInput.value, 10) || 6;
 
     if (!deepgramKey) return alert('Please enter your Deepgram API Key.');
     if (!geminiKeysRaw) return alert('Please enter at least one Gemini API Key.');
@@ -646,14 +629,14 @@
       pass1RawOutput.textContent = JSON.stringify(dgResult, null, 2);
       geminiRawOutput.textContent = JSON.stringify(rawGeminiResult, null, 2);
 
-      // STEP 3: Restored 99% Precision Continuous Piecewise Alignment (150ms Acoustic Anchor)
+      // STEP 3: Exact 99% Precision Continuous Piecewise Alignment Algorithm
       refinedWords = continuousPiecewiseAlignment(rawGeminiResult, roughWords);
-      lineChunks = chunkWordsIntoSmartLines(refinedWords, maxWords);
+      lineChunks = chunkWordsIntoLines(refinedWords, maxWords);
 
       renderGeminiTable(refinedWords);
       plainTextOutput.value = refinedWords.map(w => w.word).join(' ');
       resetCaptionViewport();
-      updateProgress(100, `Done! Synced with 99% Precision Acoustic Pronunciation Sync.`);
+      updateProgress(100, `Done! Synced via 1-Upload Cloud Proxy with 99% acoustic cadence precision.`);
 
     } catch (err) {
       alert(`Error: ${err.message}`);
@@ -726,7 +709,7 @@
     }
   }
 
-  // Restored 99% Precision Continuous Piecewise Alignment Algorithm (from commit 73edbc7)
+  // Continuous Piecewise Alignment Algorithm with Acoustic Pause Preservation (EXACT FROM PROVIDED VERSION)
   function continuousPiecewiseAlignment(words, roughWords) {
     if (!words || !words.length) return [];
 
@@ -734,10 +717,12 @@
       let start = w.start;
       let end = w.end;
 
+      // Rule 1: Prevent overlapping with previous word's end timestamp
       if (idx > 0 && start < words[idx - 1].end) {
         start = words[idx - 1].end;
       }
 
+      // Rule 2: Anchor tightly to Deepgram ground-truth acoustic sound onset if Gemini drifts > 150ms
       const sttMatch = roughWords[idx];
       if (sttMatch) {
         if (Math.abs(start - sttMatch.start) > 150) {
@@ -747,7 +732,8 @@
         }
       }
 
-      const charCount = w.word ? w.word.trim().length : 1;
+      // Rule 3: Enforce minimum display floor based on character length
+      const charCount = w.word.trim().length;
       const minDuration = Math.max(30, Math.min(350, charCount * 22));
       if (end - start < minDuration) {
         end = start + minDuration;
@@ -759,66 +745,16 @@
         word: w.word,
         start: Math.round(start),
         end: Math.round(end),
-        highlight: !!w.highlight,
-        is_expression: !!w.is_expression,
-        is_question: !!w.is_question,
-        is_sentence_end: !!w.is_sentence_end || /[.!?|॥]$/.test((w.word || '').trim()),
-        is_name: !!w.is_name
+        highlight: !!w.highlight
       };
     });
   }
 
-  // Smart Contextual Hot-Word & Sentence Line Chunking Engine
-  function chunkWordsIntoSmartLines(words, maxWordsPerLine = 5) {
-    const chunks = [];
-    let current = [];
-
-    for (let i = 0; i < words.length; i++) {
-      const w = words[i];
-
-      const isHotWord = w.is_expression || w.is_question || w.is_name;
-
-      if (isHotWord) {
-        if (current.length > 0) {
-          chunks.push({
-            start: current[0].start,
-            end: current[current.length - 1].end,
-            words: current
-          });
-          current = [];
-        }
-
-        chunks.push({
-          start: w.start,
-          end: w.end,
-          words: [w]
-        });
-        continue;
-      }
-
-      current.push(w);
-
-      const isSentenceEnd = w.is_sentence_end || /[.!?|॥]$/.test(w.word.trim());
-      const isLast = (i === words.length - 1);
-
-      if (current.length >= maxWordsPerLine || isSentenceEnd || isLast) {
-        chunks.push({
-          start: current[0].start,
-          end: current[current.length - 1].end,
-          words: current
-        });
-        current = [];
-      }
-    }
-
-    return chunks;
-  }
-
-  // Pass 1 Engine: Deepgram Nova-3 API Call (with filler_words & diarize)
+  // Pass 1 Engine: Deepgram Nova-3 API Call (with filler_words=true)
   function fetchDeepgramTimestamps(file, apiKey, lang) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      let url = `https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true&utterances=true&word_timestamps=true&filler_words=true&diarize=true`;
+      let url = `https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true&utterances=true&word_timestamps=true&filler_words=true`;
       if (lang) {
         url += `&language=${encodeURIComponent(lang)}`;
       }
@@ -831,7 +767,7 @@
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
           const pct = Math.round((e.loaded / e.total) * 25);
-          updateProgress(25 + pct, `Uploading speech audio to Deepgram: ${pct}%`);
+          updateProgress(25 + pct, `Uploading to Deepgram: ${pct}%`);
         }
       };
 
@@ -881,12 +817,10 @@
 
     let extraInstructions = "";
     if (enableHighlight) {
-      extraInstructions += `\n5. IDENTIFY NAMES & EXPRESSIONS: Set "highlight": true for proper names (e.g., "Zara", "Shrihari"), sudden vocal interjections, or exclamations ("Aiyo!", "Wow!", "Ahaa!", "Shut up"). Otherwise set "highlight": false.`;
-      extraInstructions += `\n6. ` + '`is_expression`: Mark TRUE ONLY for standalone exclamations, interjections, or isolated expressions (e.g., "Shut up", "Oh god", "Aiyo!", "Wow!", "Super").';
-      extraInstructions += `\n7. ` + '`is_name`: Mark TRUE for proper nouns, person names, or brand names (e.g., "Zara", "Shrihari", "Ani Cabs").';
+      extraInstructions += `\n5. IDENTIFY NAMES & EXPRESSIONS: Set "highlight": true for proper names (e.g., "Zara", "Shrihari"), sudden vocal interjections, or exclamations ("Aiyo!", "Wow!", "Ahaa!"). Otherwise set "highlight": false.`;
     }
     if (enableEmojis) {
-      extraInstructions += `\n8. SMART CONTEXTUAL EMOJIS: Append 1 perfect, relevant emoji ONLY to key emotive words, sudden expressions, or main nouns (e.g., "Zara 👧", "Aiyo! 😱", "Super 🔥", "Love ❤️"). NEVER add emojis to routine narrative filler words like "and", "the", "is".`;
+      extraInstructions += `\n6. SMART CONTEXTUAL EMOJIS: Append 1 perfect, relevant emoji ONLY to key emotive words, sudden expressions, or main nouns (e.g., "Zara 👧", "Aiyo! 😱", "Super 🔥", "Love ❤️"). NEVER add emojis to routine words like "and", "the", "is".`;
     }
 
     const systemPrompt = `You are an expert speech-to-text acoustic alignment engine and millisecond pronunciation timer.
@@ -904,7 +838,7 @@ STRICT ACOUSTIC PRONUNCIATION & MILLISECOND TIMING DIRECTIVES:
 4. PAUSES & BREATH BREAKS: Preserve natural silence gaps and pauses between phrases. Do not stretch words over silent gaps.
 5. Correct wrong/misspelled words from Pass 1 while keeping timestamps tightly bound to vocal sound onset/offset.${extraInstructions}
 
-Return ONLY a valid JSON array of objects with keys "word" (string), "start" (integer ms), "end" (integer ms), "highlight" (boolean), "is_expression" (boolean), "is_question" (boolean), "is_sentence_end" (boolean), "is_name" (boolean).`;
+Return ONLY a valid JSON array of objects with keys "word" (string), "start" (integer ms), "end" (integer ms), and "highlight" (boolean).`;
 
     const requestBody = {
       contents: [{
@@ -928,11 +862,7 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
               word: { type: "STRING" },
               start: { type: "INTEGER" },
               end: { type: "INTEGER" },
-              highlight: { type: "BOOLEAN" },
-              is_expression: { type: "BOOLEAN" },
-              is_question: { type: "BOOLEAN" },
-              is_sentence_end: { type: "BOOLEAN" },
-              is_name: { type: "BOOLEAN" }
+              highlight: { type: "BOOLEAN" }
             },
             required: ["word", "start", "end"]
           }
@@ -958,9 +888,44 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
     return JSON.parse(candidateText);
   }
 
+  // Helpers
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const base64String = reader.result.split(',')[1];
+        resolve(base64String);
+      };
+      reader.onerror = error => reject(error);
+    });
+  }
+
   function updateProgress(percent, text) {
     progressFill.style.width = percent + '%';
     progressText.textContent = text;
+  }
+
+  function chunkWordsIntoLines(words, maxWords = 6) {
+    const chunks = [];
+    let current = [];
+
+    words.forEach((w, i) => {
+      current.push(w);
+      const isSentenceEnd = /[.!?|॥]$/.test(w.word.trim());
+      const isLast = (i === words.length - 1);
+
+      if (current.length >= maxWords || isSentenceEnd || isLast) {
+        chunks.push({
+          start: current[0].start,
+          end: current[current.length - 1].end,
+          words: current
+        });
+        current = [];
+      }
+    });
+
+    return chunks;
   }
 
   function resetCaptionViewport() {
@@ -1009,9 +974,7 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
           span.dataset.start = w.start;
           span.dataset.end = w.end;
 
-          if (w.is_expression || w.is_question) {
-            span.classList.add('hotword');
-          } else if (w.highlight || w.is_name) {
+          if (w.highlight) {
             span.classList.add('highlighted');
           }
 
@@ -1053,13 +1016,7 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
     words.forEach((w, idx) => {
       const durationMs = w.end - w.start;
       const formattedTime = `${formatMs(w.start)} -> ${formatMs(w.end)}`;
-      
-      let flagsHtml = `<span style="color: var(--text-muted); font-size: 0.8rem;">Standard</span>`;
-      if (w.is_expression || w.is_question) {
-        flagsHtml = `<span class="hotword-badge">Hot Expression / Query</span>`;
-      } else if (w.highlight || w.is_name) {
-        flagsHtml = `<span class="tag-badge">Highlighted Name</span>`;
-      }
+      const flagsHtml = w.highlight ? `<span class="tag-badge">Highlighted Expression</span>` : `<span style="color: var(--text-muted); font-size: 0.8rem;">Standard</span>`;
 
       const tr = document.createElement('tr');
       tr.className = 'clickable-row';

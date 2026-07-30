@@ -19,8 +19,8 @@ export async function onRequestPost(context) {
 
     const arrayBuffer = await file.arrayBuffer();
 
-    // 1. Pass 1: High-Precision Deepgram Nova-3 API Call (with filler_words=true for micro-timing)
-    let dgUrl = `https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true&utterances=true&word_timestamps=true&filler_words=true&diarize=true`;
+    // 1. Pass 1: Enhanced Deepgram Nova-3 API Call (with filler_words=true for micro-pause & hesitation precision)
+    let dgUrl = `https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true&utterances=true&word_timestamps=true&filler_words=true`;
     if (spokenLang) {
       dgUrl += `&language=${encodeURIComponent(spokenLang)}`;
     }
@@ -30,7 +30,7 @@ export async function onRequestPost(context) {
       method: 'POST',
       headers: {
         'Authorization': authHeader,
-        'Content-Type': file.type || 'audio/wav'
+        'Content-Type': file.type || 'audio/mp3'
       },
       body: arrayBuffer
     }).then(async res => {
@@ -51,7 +51,7 @@ export async function onRequestPost(context) {
     }
     const base64Audio = btoa(binary);
 
-    // Wait for Deepgram response to pass baseline timestamps to Gemini
+    // Wait for Deepgram response
     const dgResult = await dgPromise;
     const dgWords = dgResult.results?.channels?.[0]?.alternatives?.[0]?.words || [];
     const roughWords = dgWords.map(w => ({
@@ -60,7 +60,7 @@ export async function onRequestPost(context) {
       end: Math.round(w.end * 1000)
     }));
 
-    // 3. Prepare Restored 99% Accurate Gemini Acoustic Cadence Prompt (from commit 73edbc7)
+    // 3. Prepare Enhanced Gemini Acoustic Alignment & Syllable Cadence Prompt
     const scriptPromptMap = {
       native: `transcribe the spoken words in the NATIVE SCRIPT of language code '${spokenLang}' (e.g. தமிழ், ಕನ್ನಡ, हिंदी).`,
       tanglish: `transcribe the spoken words in ROMANIZED / TANGLISH phonetic script using English letters (e.g. "Maanu", "Thappa", "Nee sari kadaiyathu").`,
@@ -71,12 +71,10 @@ export async function onRequestPost(context) {
 
     let extraInstructions = "";
     if (enableHighlight) {
-      extraInstructions += `\n5. IDENTIFY NAMES & EXPRESSIONS: Set "highlight": true for proper names (e.g., "Zara", "Shrihari"), sudden vocal interjections, or exclamations ("Aiyo!", "Wow!", "Ahaa!", "Shut up"). Otherwise set "highlight": false.`;
-      extraInstructions += `\n6. ` + '`is_expression`: Mark TRUE ONLY for standalone exclamations, interjections, or isolated expressions (e.g., "Shut up", "Oh god", "Aiyo!", "Wow!", "Super").';
-      extraInstructions += `\n7. ` + '`is_name`: Mark TRUE for proper nouns, person names, or brand names (e.g., "Zara", "Shrihari", "Ani Cabs").';
+      extraInstructions += `\n5. IDENTIFY NAMES & EXPRESSIONS: Set "highlight": true for proper names (e.g., "Zara", "Shrihari"), sudden vocal interjections, or exclamations ("Aiyo!", "Wow!", "Ahaa!"). Otherwise set "highlight": false.`;
     }
     if (enableEmojis) {
-      extraInstructions += `\n8. SMART CONTEXTUAL EMOJIS: Append 1 perfect, relevant emoji ONLY to key emotive words, sudden expressions, or main nouns (e.g., "Zara 👧", "Aiyo! 😱", "Super 🔥", "Love ❤️"). NEVER add emojis to routine narrative filler words like "and", "the", "is".`;
+      extraInstructions += `\n6. SMART CONTEXTUAL EMOJIS: Append 1 perfect, relevant emoji ONLY to key emotive words, sudden expressions, or main nouns (e.g., "Zara 👧", "Aiyo! 😱", "Super 🔥", "Love ❤️"). NEVER add emojis to routine words like "and", "the", "is".`;
     }
 
     const systemPrompt = `You are an expert speech-to-text acoustic alignment engine and millisecond pronunciation timer.
@@ -94,14 +92,14 @@ STRICT ACOUSTIC PRONUNCIATION & MILLISECOND TIMING DIRECTIVES:
 4. PAUSES & BREATH BREAKS: Preserve natural silence gaps and pauses between phrases. Do not stretch words over silent gaps.
 5. Correct wrong/misspelled words from Pass 1 while keeping timestamps tightly bound to vocal sound onset/offset.${extraInstructions}
 
-Return ONLY a valid JSON array of objects with keys "word" (string), "start" (integer ms), "end" (integer ms), "highlight" (boolean), "is_expression" (boolean), "is_question" (boolean), "is_sentence_end" (boolean), "is_name" (boolean).`;
+Return ONLY a valid JSON array of objects with keys "word" (string), "start" (integer ms), "end" (integer ms), and "highlight" (boolean).`;
 
     const geminiReqBody = {
       contents: [{
         parts: [
           {
             inlineData: {
-              mimeType: file.type || "audio/wav",
+              mimeType: file.type || "audio/mp3",
               data: base64Audio
             }
           },
@@ -118,11 +116,7 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
               word: { type: "STRING" },
               start: { type: "INTEGER" },
               end: { type: "INTEGER" },
-              highlight: { type: "BOOLEAN" },
-              is_expression: { type: "BOOLEAN" },
-              is_question: { type: "BOOLEAN" },
-              is_sentence_end: { type: "BOOLEAN" },
-              is_name: { type: "BOOLEAN" }
+              highlight: { type: "BOOLEAN" }
             },
             required: ["word", "start", "end"]
           }
@@ -130,7 +124,7 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
       }
     };
 
-    // Execute Gemini with key shuffle & failover
+    // Failover Shuffle Execution over Gemini Keys
     const geminiKeys = geminiKeysRaw.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
     const shuffledKeys = [...geminiKeys].sort(() => Math.random() - 0.5);
 
@@ -140,18 +134,21 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
     for (let i = 0; i < shuffledKeys.length; i++) {
       const currentKey = shuffledKeys[i];
       try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${currentKey}`, {
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${currentKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(geminiReqBody)
         });
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`Gemini API Error (${res.status}): ${errText}`);
+
+        if (!geminiRes.ok) {
+          const errText = await geminiRes.text();
+          throw new Error(`Gemini API Error (${geminiRes.status}): ${errText}`);
         }
-        const data = await res.json();
-        const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        const geminiData = await geminiRes.json();
+        const candidateText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!candidateText) throw new Error('No valid response generated by Gemini.');
+
         rawGeminiResult = JSON.parse(candidateText);
         break; // Success!
       } catch (err) {
