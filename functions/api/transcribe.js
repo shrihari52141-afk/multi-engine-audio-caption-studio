@@ -10,57 +10,76 @@ export async function onRequestPost(context) {
     const enableHighlight = formData.get('enableHighlight') === 'true';
     const enableEmojis = formData.get('enableEmojis') === 'true';
 
-    if (!file || !deepgramKey || !geminiKeysRaw) {
-      return new Response(JSON.stringify({ error: 'Missing required parameters (file, Deepgram key, or Gemini key).' }), {
+    // Optional Pre-Staged Payload (0s upload & 0s Deepgram on click!)
+    let roughWordsRaw = formData.get('roughWords');
+    let base64Audio = formData.get('base64Audio');
+    let mimeType = formData.get('mimeType') || 'audio/wav';
+    let dgResult = null;
+    let roughWords = null;
+
+    if (!geminiKeysRaw) {
+      return new Response(JSON.stringify({ error: 'Missing Gemini API key.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    const arrayBuffer = await file.arrayBuffer();
-
-    // 1. Pass 1: Enhanced Deepgram Nova-3 API Call (with filler_words=true for micro-pause & hesitation precision)
-    let dgUrl = `https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true&utterances=true&word_timestamps=true&filler_words=true`;
-    if (spokenLang) {
-      dgUrl += `&language=${encodeURIComponent(spokenLang)}`;
-    }
-
-    const authHeader = deepgramKey.toLowerCase().startsWith('token ') ? deepgramKey : `Token ${deepgramKey}`;
-    const dgPromise = fetch(dgUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': file.type || 'audio/mp3'
-      },
-      body: arrayBuffer
-    }).then(async res => {
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Deepgram API error (${res.status}): ${text}`);
+    if (roughWordsRaw && base64Audio) {
+      // Pre-staged mode: 0s Upload, 0s Deepgram!
+      roughWords = JSON.parse(roughWordsRaw);
+    } else {
+      // Standard mode
+      if (!file || !deepgramKey) {
+        return new Response(JSON.stringify({ error: 'Missing required parameters (file or Deepgram key).' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
-      return res.json();
-    });
 
-    // 2. Convert ArrayBuffer to Base64 in RAM for Gemini payload
-    const bytes = new Uint8Array(arrayBuffer);
-    let binary = '';
-    const len = bytes.byteLength;
-    const chunkSize = 0x8000;
-    for (let i = 0; i < len; i += chunkSize) {
-      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+      const arrayBuffer = await file.arrayBuffer();
+      mimeType = file.type || 'audio/wav';
+
+      // 1. Pass 1: Enhanced Deepgram Nova-3 API Call
+      let dgUrl = `https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true&utterances=true&word_timestamps=true&filler_words=true`;
+      if (spokenLang) {
+        dgUrl += `&language=${encodeURIComponent(spokenLang)}`;
+      }
+
+      const authHeader = deepgramKey.toLowerCase().startsWith('token ') ? deepgramKey : `Token ${deepgramKey}`;
+      const dgRes = await fetch(dgUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': mimeType
+        },
+        body: arrayBuffer
+      });
+
+      if (!dgRes.ok) {
+        const text = await dgRes.text();
+        throw new Error(`Deepgram API error (${dgRes.status}): ${text}`);
+      }
+
+      dgResult = await dgRes.json();
+      const dgWords = dgResult.results?.channels?.[0]?.alternatives?.[0]?.words || [];
+      roughWords = dgWords.map(w => ({
+        word: w.punctuated_word || w.word,
+        start: Math.round(w.start * 1000),
+        end: Math.round(w.end * 1000)
+      }));
+
+      // Convert ArrayBuffer to Base64 in RAM
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      const len = bytes.byteLength;
+      const chunkSize = 0x8000;
+      for (let i = 0; i < len; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+      }
+      base64Audio = btoa(binary);
     }
-    const base64Audio = btoa(binary);
 
-    // Wait for Deepgram response
-    const dgResult = await dgPromise;
-    const dgWords = dgResult.results?.channels?.[0]?.alternatives?.[0]?.words || [];
-    const roughWords = dgWords.map(w => ({
-      word: w.punctuated_word || w.word,
-      start: Math.round(w.start * 1000),
-      end: Math.round(w.end * 1000)
-    }));
-
-    // 3. Prepare Enhanced Gemini Acoustic Alignment & Syllable Cadence Prompt
+    // 2. Prepare Enhanced Gemini Acoustic Alignment & Syllable Cadence Prompt
     const scriptPromptMap = {
       native: `transcribe the spoken words in the NATIVE SCRIPT of language code '${spokenLang}' (e.g. தமிழ், ಕನ್ನಡ, हिंदी).`,
       tanglish: `transcribe the spoken words in ROMANIZED / TANGLISH phonetic script using English letters (e.g. "Maanu", "Thappa", "Nee sari kadaiyathu").`,
@@ -99,7 +118,7 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
         parts: [
           {
             inlineData: {
-              mimeType: file.type || "audio/mp3",
+              mimeType: mimeType,
               data: base64Audio
             }
           },
@@ -107,6 +126,7 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
         ]
       }],
       generationConfig: {
+        temperature: 0.1,
         responseMimeType: "application/json",
         responseSchema: {
           type: "ARRAY",
@@ -124,7 +144,7 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
       }
     };
 
-    // Failover Shuffle Execution over Gemini Keys
+    // Fast Failover Execution over Gemini Keys
     const geminiKeys = geminiKeysRaw.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
     const shuffledKeys = [...geminiKeys].sort(() => Math.random() - 0.5);
 
