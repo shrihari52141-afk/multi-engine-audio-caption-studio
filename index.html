@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Deepgram Nova-3 + Gemini Dual-Pass Audio/Video Caption Studio</title>
+  <title>Deepgram Nova-3 + Gemini Dual-Pass Audio Caption Studio</title>
   <style>
     :root {
       --bg: #090d16;
@@ -32,14 +32,20 @@
 
     .container {
       width: 100%;
-      max-width: 1040px;
+      max-width: 1020px;
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
     }
 
-    .header { text-align: center; }
-    .header h1 { margin: 0 0 0.5rem 0; font-size: 1.8rem; }
+    .header {
+      text-align: center;
+    }
+
+    .header h1 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.8rem;
+    }
 
     .card {
       background: var(--card-bg);
@@ -51,9 +57,17 @@
       gap: 1rem;
     }
 
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
-    .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1rem;
+    }
 
     label {
       font-size: 0.85rem;
@@ -63,7 +77,7 @@
       display: block;
     }
 
-    input[type="text"], input[type="file"], input[type="number"], select, textarea {
+    input[type="text"], input[type="file"], select, textarea {
       width: 100%;
       padding: 0.65rem;
       background: var(--code-bg);
@@ -75,7 +89,10 @@
       font-family: inherit;
     }
 
-    textarea { resize: vertical; min-height: 60px; }
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
 
     .checkbox-group {
       display: flex;
@@ -85,7 +102,6 @@
       padding: 0.75rem 1rem;
       border-radius: 8px;
       border: 1px solid var(--border);
-      flex-wrap: wrap;
     }
 
     .checkbox-item {
@@ -127,8 +143,14 @@
       font-size: 0.95rem;
     }
 
-    button:hover { background: var(--primary-hover); }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button:hover {
+      background: var(--primary-hover);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
 
     .progress-container {
       width: 100%;
@@ -160,39 +182,18 @@
       text-shadow: 0 0 4px #000;
     }
 
-    .preview-stage {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1rem;
-      background: #000;
-      border-radius: 10px;
-      padding: 1rem;
-      border: 1px solid var(--border);
-    }
-
-    video {
-      max-width: 100%;
-      max-height: 380px;
-      border-radius: 8px;
-      background: #000;
-      display: none;
-    }
-
     .caption-viewport {
-      background: rgba(11, 16, 29, 0.92);
+      background: #000;
       border-radius: 8px;
-      min-height: 120px;
-      width: 100%;
+      height: 160px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 1.25rem;
+      padding: 1.5rem;
       text-align: center;
       border: 2px solid var(--border);
       position: relative;
       overflow: hidden;
-      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
     }
 
     .caption-text {
@@ -213,7 +214,9 @@
       border-radius: 6px;
     }
 
-    .word-chunk:hover { color: #cbd5e1; }
+    .word-chunk:hover {
+      color: #cbd5e1;
+    }
 
     .word-chunk.active {
       color: var(--highlight);
@@ -221,7 +224,9 @@
       text-shadow: 0 0 16px rgba(245, 158, 11, 0.8);
     }
 
-    .word-chunk.passed { color: #f8fafc; }
+    .word-chunk.passed {
+      color: #f8fafc;
+    }
 
     .word-chunk.highlighted {
       background: rgba(245, 158, 11, 0.18);
@@ -237,7 +242,9 @@
       transform: scale(1.22);
     }
 
-    audio { width: 100%; }
+    audio {
+      width: 100%;
+    }
 
     .tab-bar {
       display: flex;
@@ -262,8 +269,13 @@
       border-color: var(--border);
     }
 
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
 
     pre {
       background: var(--code-bg);
@@ -277,12 +289,35 @@
       max-height: 350px;
     }
 
-    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.95rem; }
-    th, td { border: 1px solid var(--border); padding: 0.6rem 0.8rem; text-align: left; }
-    th { background: #1e293b; color: var(--accent); }
-    tr:nth-child(even) { background: #0d1424; }
-    tr.clickable-row { cursor: pointer; }
-    tr.clickable-row:hover { background: #1e293b; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.6rem 0.8rem;
+      text-align: left;
+    }
+
+    th {
+      background: #1e293b;
+      color: var(--accent);
+    }
+
+    tr:nth-child(even) {
+      background: #0d1424;
+    }
+
+    tr.clickable-row {
+      cursor: pointer;
+    }
+
+    tr.clickable-row:hover {
+      background: #1e293b;
+    }
 
     .badge {
       display: inline-block;
@@ -310,8 +345,8 @@
 
 <div class="container">
   <div class="header">
-    <h1>Deepgram Nova-3 + Gemini Dual-Pass Audio/Video Caption Studio</h1>
-    <p style="color: var(--text-muted); margin: 0;">Exact 99% Precision Acoustic Pronunciation Alignment & Name Highlighting</p>
+    <h1>Deepgram Nova-3 + Gemini Dual-Pass Audio Caption Studio</h1>
+    <p style="color: var(--text-muted); margin: 0;">Precision Pronunciation Alignment with Name Highlighting & Smart Emojis</p>
   </div>
 
   <!-- API Key Setup Card -->
@@ -327,13 +362,13 @@
       </div>
     </div>
     <div class="info-box">
-      ⚡ <strong>Exact 99% Acoustic Sync Engine:</strong> Uses Deepgram Nova-3 micro-timing (with filler word detection) + Gemini syllable cadence alignment & 150ms acoustic anchor. Reads media via 16kHz mono downsampler (~30ms) for instant uploads!
+      ⚡ <strong>Single 1-Upload Cloud Pipeline:</strong> Audio is uploaded ONCE to Cloudflare Pages in-memory proxy, which dispatches to Deepgram Nova-3 (with filler word detection) and Gemini in parallel over high-speed datacenter fiber for exact acoustic pronunciation sync.
     </div>
   </div>
 
-  <!-- Audio/Video & Output Settings -->
+  <!-- Audio & Output Settings -->
   <div class="card">
-    <div class="grid-4">
+    <div class="grid-3">
       <div>
         <label for="geminiModelSelect">Pass 2 Gemini Refiner</label>
         <select id="geminiModelSelect">
@@ -366,10 +401,6 @@
           <option value="es">Spanish</option>
         </select>
       </div>
-      <div>
-        <label for="maxWordsInput">Max Words per Line</label>
-        <input type="number" id="maxWordsInput" value="6" min="2" max="10">
-      </div>
     </div>
 
     <!-- Feature Toggles -->
@@ -385,11 +416,11 @@
     </div>
 
     <div>
-      <label for="mediaFile">Select Audio or Video File (MP4, MP3, WAV, M4A, WebM, MOV)</label>
-      <input type="file" id="mediaFile" accept="audio/*,video/*">
+      <label for="audioFile">Select Audio File (MP3, WAV, M4A, WebM)</label>
+      <input type="file" id="audioFile" accept="audio/*">
     </div>
 
-    <button id="processBtn">Transcribe & Sync Complete Track</button>
+    <button id="processBtn">Transcribe & Sync Complete Audio Track</button>
 
     <!-- Upload/Processing Progress Bar -->
     <div id="progressContainer" class="progress-container">
@@ -398,20 +429,17 @@
     </div>
   </div>
 
-  <!-- Live Caption & Media Preview Stage -->
+  <!-- Live Caption Viewport -->
   <div class="card">
-    <label>Live Zero-Lag Media Caption Stage (60 FPS Engine)</label>
-    <div class="preview-stage">
-      <video id="videoPlayer" controls></video>
-      <audio id="audioPlayer" controls></audio>
-      <div class="caption-viewport">
-        <div id="captionContainer" class="caption-text">
-          <span style="color: var(--text-muted); font-size: 1rem; font-weight: normal;">
-            Process media to test zero-lag synchronized captions.
-          </span>
-        </div>
+    <label>Live Synchronized Captions (60 FPS Engine)</label>
+    <div class="caption-viewport">
+      <div id="captionContainer" class="caption-text">
+        <span style="color: var(--text-muted); font-size: 1rem; font-weight: normal;">
+          Process audio to test zero-lag synchronized captions.
+        </span>
       </div>
     </div>
+    <audio id="audioPlayer" controls></audio>
   </div>
 
   <!-- Outputs Card -->
@@ -425,7 +453,7 @@
 
     <!-- Tab 1: Corrected Timestamps -->
     <div id="geminiWordsTab" class="tab-content active">
-      <label>100% Precision Word Timestamps (Click row to seek media)</label>
+      <label>100% Precision Word Timestamps (Click row to seek audio)</label>
       <div style="max-height: 350px; overflow-y: auto;">
         <table id="geminiTable">
           <thead>
@@ -473,17 +501,15 @@
   const geminiModelSelect = document.getElementById('geminiModelSelect');
   const scriptModeSelect = document.getElementById('scriptMode');
   const spokenLangSelect = document.getElementById('spokenLang');
-  const maxWordsInput = document.getElementById('maxWordsInput');
   const enableHighlightCb = document.getElementById('enableHighlight');
   const enableEmojisCb = document.getElementById('enableEmojis');
-  const mediaFileInput = document.getElementById('mediaFile');
+  const audioFileInput = document.getElementById('audioFile');
   const processBtn = document.getElementById('processBtn');
 
   const progressContainer = document.getElementById('progressContainer');
   const progressFill = document.getElementById('progressFill');
   const progressText = document.getElementById('progressText');
 
-  const videoPlayer = document.getElementById('videoPlayer');
   const audioPlayer = document.getElementById('audioPlayer');
   const captionContainer = document.getElementById('captionContainer');
 
@@ -492,7 +518,6 @@
   const pass1RawOutput = document.getElementById('pass1RawOutput');
   const geminiRawOutput = document.getElementById('geminiRawOutput');
 
-  let activeMedia = audioPlayer;
   let refinedWords = [];
   let lineChunks = [];
   let animFrameId = null;
@@ -512,28 +537,19 @@
     localStorage.setItem('gemini_api_keys', geminiApiKeysInput.value.trim());
   });
 
-  maxWordsInput.addEventListener('change', () => {
-    if (refinedWords.length > 0) {
-      const maxW = parseInt(maxWordsInput.value, 10) || 6;
-      lineChunks = chunkWordsIntoLines(refinedWords, maxW);
-      updateSubtitles(activeMedia.currentTime * 1000);
-    }
-  });
-
   processBtn.addEventListener('click', async () => {
     const deepgramKey = deepgramApiKeyInput.value.trim();
     const geminiKeysRaw = geminiApiKeysInput.value.trim();
-    const file = mediaFileInput.files[0];
+    const file = audioFileInput.files[0];
     const geminiModel = geminiModelSelect.value;
     const scriptMode = scriptModeSelect.value;
     const spokenLang = spokenLangSelect.value;
     const enableHighlight = enableHighlightCb.checked;
     const enableEmojis = enableEmojisCb.checked;
-    const maxWords = parseInt(maxWordsInput.value, 10) || 6;
 
     if (!deepgramKey) return alert('Please enter your Deepgram API Key.');
     if (!geminiKeysRaw) return alert('Please enter at least one Gemini API Key.');
-    if (!file) return alert('Please select a media file.');
+    if (!file) return alert('Please select an audio file.');
 
     const geminiKeys = geminiKeysRaw.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
     if (!geminiKeys.length) return alert('No valid Gemini key found.');
@@ -541,38 +557,13 @@
     try {
       processBtn.disabled = true;
       progressContainer.style.display = 'block';
+      audioPlayer.src = URL.createObjectURL(file);
 
-      // Setup Video vs Audio player seamlessly
-      const objectUrl = URL.createObjectURL(file);
-      if (file.type.startsWith('video/')) {
-        videoPlayer.style.display = 'block';
-        audioPlayer.style.display = 'none';
-        videoPlayer.src = objectUrl;
-        activeMedia = videoPlayer;
-      } else {
-        videoPlayer.style.display = 'none';
-        audioPlayer.style.display = 'block';
-        audioPlayer.src = objectUrl;
-        activeMedia = audioPlayer;
-      }
-
-      bindMediaEvents(activeMedia);
-
-      // STEP 1: In-Browser 16,000 Hz Mono Audio Extraction (~30ms)
-      updateProgress(15, 'Extracting 16kHz mono speech audio in ~30ms...');
-      let optimizedBlob;
-      try {
-        optimizedBlob = await extract16kHzMonoAudioBlob(file);
-      } catch (extractErr) {
-        console.warn('16kHz downsampler fallback to original file:', extractErr.message);
-        optimizedBlob = file;
-      }
-
-      // STEP 2: Single 1-Upload to Cloudflare Pages In-Memory Proxy (/api/transcribe)
-      updateProgress(35, 'Uploading tiny 16kHz mono speech payload (<0.1s network)...');
+      // STEP 1: Single 1-Upload to Cloudflare Pages In-Memory Proxy (/api/transcribe)
+      updateProgress(25, 'Uploading audio ONCE to Cloudflare high-speed fiber...');
 
       const formData = new FormData();
-      formData.append('file', optimizedBlob, 'speech_16k.wav');
+      formData.append('file', file);
       formData.append('deepgramApiKey', deepgramKey);
       formData.append('geminiApiKey', geminiKeysRaw);
       formData.append('geminiModel', geminiModel);
@@ -602,8 +593,8 @@
         console.warn('Cloudflare proxy unavailable, falling back to direct browser calls:', proxyErr.message);
 
         // Fallback: Direct browser calls
-        updateProgress(45, 'Fallback: Transcribing Deepgram Nova-3 (with filler words)...');
-        dgResult = await fetchDeepgramTimestamps(optimizedBlob, deepgramKey, spokenLang);
+        updateProgress(35, 'Fallback: Transcribing Deepgram Nova-3 (with filler words)...');
+        dgResult = await fetchDeepgramTimestamps(file, deepgramKey, spokenLang);
         const dgWords = dgResult.results?.channels?.[0]?.alternatives?.[0]?.words || [];
         roughWords = dgWords.map(w => ({
           word: w.punctuated_word || w.word,
@@ -611,11 +602,11 @@
           end: Math.round(w.end * 1000)
         }));
 
-        updateProgress(70, 'Fallback: Refining acoustic cadence with Gemini...');
-        const audioBase64 = await fileToBase64(optimizedBlob);
+        updateProgress(65, 'Fallback: Refining acoustic cadence with Gemini...');
+        const audioBase64 = await fileToBase64(file);
         rawGeminiResult = await refineWithGeminiWithFailover(
           audioBase64, 
-          'audio/wav', 
+          file.type, 
           roughWords, 
           scriptMode, 
           spokenLang, 
@@ -629,14 +620,14 @@
       pass1RawOutput.textContent = JSON.stringify(dgResult, null, 2);
       geminiRawOutput.textContent = JSON.stringify(rawGeminiResult, null, 2);
 
-      // STEP 3: Exact 99% Precision Continuous Piecewise Alignment Algorithm
+      // STEP 2: Continuous Piecewise Re-Anchoring Algorithm
       refinedWords = continuousPiecewiseAlignment(rawGeminiResult, roughWords);
-      lineChunks = chunkWordsIntoLines(refinedWords, maxWords);
+      lineChunks = chunkWordsIntoLines(refinedWords, 6);
 
       renderGeminiTable(refinedWords);
       plainTextOutput.value = refinedWords.map(w => w.word).join(' ');
       resetCaptionViewport();
-      updateProgress(100, `Done! Synced via 1-Upload Cloud Proxy with 99% acoustic cadence precision.`);
+      updateProgress(100, `Done! Synced via 1-Upload Cloud Proxy with acoustic cadence precision.`);
 
     } catch (err) {
       alert(`Error: ${err.message}`);
@@ -647,69 +638,7 @@
     }
   });
 
-  // 16,000 Hz OfflineAudioContext Mono Downsampler Engine (~30ms execution time)
-  async function extract16kHzMonoAudioBlob(file) {
-    const arrayBuffer = await file.arrayBuffer();
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-
-    const targetSampleRate = 16000;
-    const offlineCtx = new OfflineAudioContext(1, Math.ceil(decodedBuffer.duration * targetSampleRate), targetSampleRate);
-
-    const source = offlineCtx.createBufferSource();
-    source.buffer = decodedBuffer;
-    source.connect(offlineCtx.destination);
-    source.start(0);
-
-    const renderedBuffer = await offlineCtx.startRendering();
-    audioCtx.close();
-
-    return audioBufferToWavBlob(renderedBuffer);
-  }
-
-  // Convert 16 kHz Mono AudioBuffer to 16-bit PCM WAV Blob in RAM
-  function audioBufferToWavBlob(buffer) {
-    const numChannels = 1;
-    const sampleRate = buffer.sampleRate;
-    const format = 1; // PCM
-    const bitDepth = 16;
-    const samples = buffer.getChannelData(0);
-    const dataLength = samples.length * 2;
-    const bufferLength = 44 + dataLength;
-
-    const arrayBuffer = new ArrayBuffer(bufferLength);
-    const view = new DataView(arrayBuffer);
-
-    writeString(view, 0, 'RIFF');
-    view.setUint32(4, 36 + dataLength, true);
-    writeString(view, 8, 'WAVE');
-    writeString(view, 12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, format, true);
-    view.setUint16(22, numChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * numChannels * (bitDepth / 8), true);
-    view.setUint16(32, numChannels * (bitDepth / 8), true);
-    view.setUint16(34, bitDepth, true);
-    writeString(view, 36, 'data');
-    view.setUint32(40, dataLength, true);
-
-    let offset = 44;
-    for (let i = 0; i < samples.length; i++, offset += 2) {
-      const s = Math.max(-1, Math.min(1, samples[i]));
-      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-    }
-
-    return new Blob([view], { type: 'audio/wav' });
-  }
-
-  function writeString(view, offset, string) {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i));
-    }
-  }
-
-  // Continuous Piecewise Alignment Algorithm with Acoustic Pause Preservation (EXACT FROM PROVIDED VERSION)
+  // Continuous Piecewise Alignment Algorithm with Acoustic Pause Preservation
   function continuousPiecewiseAlignment(words, roughWords) {
     if (!words || !words.length) return [];
 
@@ -762,7 +691,7 @@
       xhr.open('POST', url);
       const authHeader = apiKey.toLowerCase().startsWith('token ') ? apiKey : `Token ${apiKey}`;
       xhr.setRequestHeader('Authorization', authHeader);
-      xhr.setRequestHeader('Content-Type', file.type || 'audio/wav');
+      xhr.setRequestHeader('Content-Type', file.type || 'audio/mp3');
 
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
@@ -845,7 +774,7 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
         parts: [
           {
             inlineData: {
-              mimeType: mimeType || "audio/wav",
+              mimeType: mimeType || "audio/mp3",
               data: audioBase64
             }
           },
@@ -929,25 +858,17 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
   }
 
   function resetCaptionViewport() {
-    captionContainer.innerHTML = `<span style="color: var(--text-muted); font-size: 1rem;">Press Play on media player to test synchronized captions</span>`;
+    captionContainer.innerHTML = `<span style="color: var(--text-muted); font-size: 1rem;">Press Play on audio player to test synchronized captions</span>`;
   }
 
-  function bindMediaEvents(mediaEl) {
-    mediaEl.addEventListener('play', startSyncLoop);
-    mediaEl.addEventListener('pause', () => {
-      if (animFrameId) cancelAnimationFrame(animFrameId);
-    });
-    mediaEl.addEventListener('seeked', () => {
-      updateSubtitles(mediaEl.currentTime * 1000);
-    });
-  }
-
+  // Zero-Lag 60 FPS Sync Loop
   function startSyncLoop() {
     if (animFrameId) cancelAnimationFrame(animFrameId);
 
     function tick() {
-      if (!activeMedia.paused && refinedWords.length > 0) {
-        updateSubtitles(activeMedia.currentTime * 1000);
+      if (!audioPlayer.paused && refinedWords.length > 0) {
+        const currentTimeMs = audioPlayer.currentTime * 1000;
+        updateSubtitles(currentTimeMs);
         animFrameId = requestAnimationFrame(tick);
       }
     }
@@ -955,56 +876,44 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
     animFrameId = requestAnimationFrame(tick);
   }
 
-  let currentActiveChunkId = null;
-
   function updateSubtitles(currentTimeMs) {
     const activeChunk = lineChunks.find(c => currentTimeMs >= c.start && currentTimeMs <= c.end + 80);
 
     if (activeChunk) {
-      const chunkId = activeChunk.start + '_' + activeChunk.end;
-      
-      if (currentActiveChunkId !== chunkId) {
-        currentActiveChunkId = chunkId;
-        captionContainer.innerHTML = '';
+      captionContainer.innerHTML = '';
+      activeChunk.words.forEach(w => {
+        const span = document.createElement('span');
+        span.textContent = w.word + ' ';
+        span.className = 'word-chunk';
 
-        activeChunk.words.forEach(w => {
-          const span = document.createElement('span');
-          span.textContent = w.word + ' ';
-          span.className = 'word-chunk';
-          span.dataset.start = w.start;
-          span.dataset.end = w.end;
-
-          if (w.highlight) {
-            span.classList.add('highlighted');
-          }
-
-          span.addEventListener('click', () => {
-            activeMedia.currentTime = w.start / 1000;
-          });
-
-          captionContainer.appendChild(span);
-        });
-      }
-
-      captionContainer.querySelectorAll('.word-chunk').forEach(span => {
-        const startMs = parseFloat(span.dataset.start);
-        const endMs = parseFloat(span.dataset.end);
-
-        if (currentTimeMs >= startMs && currentTimeMs <= endMs) {
-          span.classList.add('active');
-          span.classList.remove('passed');
-        } else if (currentTimeMs > endMs) {
-          span.classList.remove('active');
-          span.classList.add('passed');
-        } else {
-          span.classList.remove('active', 'passed');
+        if (w.highlight) {
+          span.classList.add('highlighted');
         }
+
+        if (currentTimeMs >= w.start && currentTimeMs <= w.end) {
+          span.classList.add('active');
+        } else if (currentTimeMs > w.end) {
+          span.classList.add('passed');
+        }
+
+        span.addEventListener('click', () => {
+          audioPlayer.currentTime = w.start / 1000;
+        });
+
+        captionContainer.appendChild(span);
       });
     } else {
-      currentActiveChunkId = null;
       captionContainer.querySelectorAll('.word-chunk.active').forEach(el => el.classList.remove('active'));
     }
   }
+
+  audioPlayer.addEventListener('play', startSyncLoop);
+  audioPlayer.addEventListener('pause', () => {
+    if (animFrameId) cancelAnimationFrame(animFrameId);
+  });
+  audioPlayer.addEventListener('seeked', () => {
+    updateSubtitles(audioPlayer.currentTime * 1000);
+  });
 
   function renderGeminiTable(words) {
     geminiTableBody.innerHTML = '';
@@ -1020,7 +929,7 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
 
       const tr = document.createElement('tr');
       tr.className = 'clickable-row';
-      tr.title = 'Click to seek media';
+      tr.title = 'Click to seek audio';
       tr.innerHTML = `
         <td>${idx + 1}</td>
         <td style="color: #f59e0b; font-weight: bold; font-size: 1.1rem;">${escapeHtml(w.word)}</td>
@@ -1032,8 +941,8 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
       `;
 
       tr.addEventListener('click', () => {
-        activeMedia.currentTime = w.start / 1000;
-        activeMedia.play();
+        audioPlayer.currentTime = w.start / 1000;
+        audioPlayer.play();
       });
 
       geminiTableBody.appendChild(tr);
@@ -1057,7 +966,7 @@ Return ONLY a valid JSON array of objects with keys "word" (string), "start" (in
   }
 
   function escapeHtml(text) {
-    return (text || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 </script>
 
